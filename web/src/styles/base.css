@@ -1,0 +1,169 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink);
+  /* Confetti paper: scattered dots in the festival palette. */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 12% 18%, var(--marigold) 0 3px, transparent 4px),
+    radial-gradient(circle at 78% 9%, var(--rani) 0 3px, transparent 4px),
+    radial-gradient(circle at 42% 72%, var(--mint) 0 3px, transparent 4px),
+    radial-gradient(circle at 90% 64%, var(--sindoor) 0 2px, transparent 3px),
+    radial-gradient(circle at 25% 92%, var(--peacock) 0 2px, transparent 3px);
+  background-size: 260px 260px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--peacock);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: -4rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  z-index: 10;
+}
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Bunting: a string of festive triangles across the top. */
+.bunting {
+  height: 34px;
+  background:
+    linear-gradient(135deg, var(--marigold) 25%, transparent 25%) 0 0 / 48px 34px repeat-x,
+    linear-gradient(225deg, var(--marigold) 25%, transparent 25%) 0 0 / 48px 34px repeat-x;
+  border-top: 4px solid var(--ink);
+}
+.bunting--rani {
+  background:
+    linear-gradient(135deg, var(--rani) 25%, transparent 25%) 24px 0 / 48px 34px repeat-x,
+    linear-gradient(225deg, var(--rani) 25%, transparent 25%) 24px 0 / 48px 34px repeat-x;
+  border-top: 0;
+  margin-top: -34px;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3) var(--space-6);
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+.hero h1 {
+  font-size: clamp(2.6rem, 7vw, 4.75rem);
+  font-weight: 800;
+}
+.hero__mark {
+  background: linear-gradient(transparent 62%, var(--marigold) 62% 88%, transparent 88%);
+  padding: 0 0.15em;
+}
+.hero p {
+  max-width: 38rem;
+  margin: 0 auto;
+  font-size: 1.2rem;
+  color: var(--ink-soft);
+}
+
+.event-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-5);
+}
+
+.sticker {
+  background: var(--white);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sticker);
+  padding: var(--space-4);
+  border-top: 14px solid var(--accent);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 160ms ease;
+}
+.sticker:nth-child(1) {
+  --tilt: -1.5deg;
+}
+.sticker:nth-child(2) {
+  --tilt: 1deg;
+}
+.sticker:nth-child(3) {
+  --tilt: -0.5deg;
+}
+.sticker:hover {
+  transform: rotate(0deg) translateY(-3px);
+}
+.sticker h2 {
+  font-size: 1.6rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--lilac-tint);
+  font-weight: 700;
+}
+
+.site-footer {
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

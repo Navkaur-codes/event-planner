@@ -1,0 +1,44 @@
+/* "Mela" design tokens — joyful, festive, WCAG AA on every text pair. */
+:root {
+  --paper: #fff6e9;
+  --ink: #2b1b3d;
+  --ink-soft: #5a4a6b;
+  --marigold: #ffb627;
+  --rani: #e5446d;
+  --mint: #3dccc7;
+  --peacock: #1b6f8c;
+  --sindoor: #f25c2a;
+  --lilac-tint: #eadcf8;
+  --white: #ffffff;
+
+  --accent: var(--marigold);
+  --accent-tint: #fff0cc;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius: 18px;
+  --radius-pill: 999px;
+  --shadow-sticker: 4px 5px 0 var(--ink);
+  --focus-ring: 0 0 0 3px var(--paper), 0 0 0 6px var(--ink);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+}
+
+/* The chosen event type re-themes the whole UI. */
+[data-event='wedding'] {
+  --accent: var(--rani);
+  --accent-tint: #fbdbe4;
+}
+[data-event='birthday'] {
+  --accent: var(--mint);
+  --accent-tint: #d5f5f3;
+}
+[data-event='community'] {
+  --accent: var(--peacock);
+  --accent-tint: #d3e8ef;
+}

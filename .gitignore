@@ -1,0 +1,27 @@
+# --- Never pushed: local planning docs and tool state ---
+docs/
+.claude/
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Dependencies and build output ---
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# --- Logs, OS and editor files ---
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Media for the demo (kept out of the repo for size) ---
+*.mp4
+*.mov
+*.mkv

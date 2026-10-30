@@ -1,0 +1,16 @@
+# Render Blueprint — one free web service serving the API and the built web app.
+services:
+  - type: web
+    name: utsav-event-planner
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Secret: set the value in the Render dashboard, never in this file.
+      - key: GROQ_API_KEY
+        sync: false

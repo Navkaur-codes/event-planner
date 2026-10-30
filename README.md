@@ -3,7 +3,7 @@
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
 > **Status:** 🚧 v0.1 — scaffold ready: shared contracts, secure API skeleton, festive landing page, CI and deploy config. Planning engine, AI ideas and the planner UI arrive in v0.2. This README is updated at every milestone.
-> **Live demo:** _coming soon (Render)_ · **Demo video:** _coming soon_
+> **Live demo:** https://utsav-event-planner-1xh3.onrender.com · **Demo video:** _coming soon_
 
 ---
 

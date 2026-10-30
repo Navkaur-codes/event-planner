@@ -13,7 +13,11 @@ const FORBIDDEN_TRACKED = [/^docs\//, /^\.claude\//, /(^|\/)\.env(\..+)?$/];
 
 const PATTERNS = [
   { name: 'Groq API key', regex: /gsk_[A-Za-z0-9]{20,}/ },
-  { name: 'Assigned GROQ_API_KEY value', regex: /GROQ_API_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]{8,}/ },
+  // .env-style line with a real value (code such as `GROQ_API_KEY: optional(...)` is not a match).
+  {
+    name: 'Assigned GROQ_API_KEY value',
+    regex: /^\s*(?:export\s+)?GROQ_API_KEY\s*=\s*["']?[^\s"'#]{8,}/m,
+  },
   { name: 'Private key block', regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ];
 

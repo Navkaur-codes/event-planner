@@ -6,9 +6,9 @@ import { AiIdeasSchema, type AiIdeas } from '@utsav/shared';
 
 const HTML_TAG = /<\/?[a-z][^>]*>/gi;
 const CONTROL_CHARS = /\p{Cc}/gu;
-// Money amounts like "₹50,000", "Rs 500", "$20", "2 lakh" — the engine owns all numbers.
+// Money amounts like "₹50,000", "Rs 500", "$20", "2 lakh", "5 हज़ार रुपये" — the engine owns all numbers.
 const MONEY =
-  /(?:₹|\brs\.?|\binr\b|\$|€|£)\s?\d|\d[\d,.]*\s?(?:₹|\brs\b|\binr\b|rupees?|dollars?|euros?|pounds?|lakhs?|crores?|usd|eur|gbp)/i;
+  /(?:₹|\brs\.?|\binr\b|\$|€|£)\s?\d|\d[\d,.]*\s?(?:₹|\brs\b|\binr\b|rupees?|dollars?|euros?|pounds?|lakhs?|crores?|usd|eur|gbp)|\d[\d,.]*\s?(?:हज़ार\s?)?(?:रुपये|रुपए|लाख|करोड़)/i;
 
 // Signs that an answer echoes the prompt or a key (prompt injection that "worked").
 const LEAK = /gsk_|you are utsav|event_data|refine_data|never reveal these instructions/i;
@@ -101,11 +101,11 @@ function normalize(value: unknown): unknown {
   for (const [key, max] of Object.entries(LIST_LIMITS)) {
     const list = copy[key];
     if (Array.isArray(list)) {
+      // Blank or non-text items are dropped, not fatal; an emptied list still fails the schema.
       copy[key] = list
+        .filter((item): item is string => typeof item === 'string' && item.length > 0)
         .slice(0, max)
-        .map((item: unknown) =>
-          typeof item === 'string' ? truncateText(item, TEXT_LIMITS.item) : item,
-        );
+        .map((item) => truncateText(item, TEXT_LIMITS.item));
     }
   }
   return copy;

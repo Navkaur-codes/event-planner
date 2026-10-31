@@ -80,7 +80,7 @@ describe('parseRefinement', () => {
       guestCount: birthdayInput.guestCount + 5,
       addConstraints: ['eco_friendly'],
     });
-    expect(explanation).toMatch(/^I reduced the budget by 10%, .+ and added eco friendly\.$/);
+    expect(explanation).toMatch(/^I reduced the budget by 10%, .+ and added eco-friendly\.$/);
   });
 
   it('falls back to an idea focus when nothing structural is asked', () => {
@@ -104,5 +104,42 @@ describe('numbersIn', () => {
     expect([...numbersIn('cut 20% to 80,000 or 75k, 2 lakh, 1.5 crore')]).toEqual([
       20, 80_000, 75_000, 200_000, 15_000_000,
     ]);
+  });
+});
+
+describe('parseRefinement in Hindi', () => {
+  const hindi = { ...birthdayInput, language: 'hi' as const };
+
+  it('reads Hindi requests and explains in Hindi', () => {
+    const { patch, explanation } = parseRefinement(hindi, 'बजट 20% कम करो');
+    expect(patch).toEqual({ budgetChangePercent: -20 });
+    expect(applyPatch(hindi, patch).budget).toBe(hindi.budget * 0.8);
+    expect(explanation).toBe('मैंने बजट 20% घटा दिया।');
+  });
+
+  it('reads Hindi constraints and extra guests', () => {
+    const { patch, explanation } = parseRefinement(
+      hindi,
+      '10 और मेहमान, और इसे पर्यावरण के अनुकूल बनाओ',
+    );
+    expect(patch).toEqual({
+      guestCount: hindi.guestCount + 10,
+      addConstraints: ['eco_friendly'],
+    });
+    expect(explanation).toBe(
+      `मैंने मेहमानों की संख्या ${hindi.guestCount + 10} कर दी और पर्यावरण-अनुकूल जोड़ा।`,
+    );
+  });
+
+  it('explains English requests in Hindi when the plan language is Hindi', () => {
+    expect(parseRefinement(hindi, 'increase budget by 10%').explanation).toBe(
+      'मैंने बजट 10% बढ़ा दिया।',
+    );
+  });
+
+  it('falls back to an idea focus with a Hindi explanation', () => {
+    const { patch, explanation } = parseRefinement(hindi, 'ज़्यादा रंगीन सजावट');
+    expect(patch).toEqual({ ideaFocus: 'ज़्यादा रंगीन सजावट' });
+    expect(explanation).toMatch(/^आपकी योजना वैसी ही रखी/);
   });
 });

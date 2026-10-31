@@ -99,6 +99,17 @@ describe('parseIdeas', () => {
     expect(failureOf(raw({ summary: 'Spend about 2 lakh on decor.' }))).toBe('money');
   });
 
+  it('drops Hindi price mentions too', () => {
+    const ideas = ideasOf(raw({ food: ['चाट काउंटर', 'केक 5 हज़ार रुपये में', 'सजावट पर 2 लाख'] }));
+    expect(ideas?.food).toEqual(['चाट काउंटर']);
+  });
+
+  it('drops blank or non-text list items instead of failing', () => {
+    const ideas = ideasOf(raw({ personalTouches: ['', 42, null, 'Memory jar', '   '] }));
+    expect(ideas?.personalTouches).toEqual(['Memory jar']);
+    expect(failureOf(raw({ personalTouches: ['', null] }))).toBe('schema:personalTouches');
+  });
+
   it('keeps ordinary numbers that are not money', () => {
     const ideas = ideasOf(raw({ activities: ['A 7-station treasure hunt for 40 kids'] }));
     expect(ideas?.activities).toEqual(['A 7-station treasure hunt for 40 kids']);

@@ -4,6 +4,7 @@
  */
 import { createHash } from 'node:crypto';
 
+/** A bounded, expiring key-value store. */
 export interface LruCache<V> {
   get(key: string): V | undefined;
   set(key: string, value: V): void;

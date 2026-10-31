@@ -29,8 +29,8 @@ export function sendValidationError(res: Response, issues: Issues): void {
   sendError(res, 400, 'VALIDATION', 'Some details need fixing.', issues);
 }
 
-/** Today's date as ISO "YYYY-MM-DD" (UTC) — the same clock the engine receives. */
-export function isoDay(today: Date): string {
+/** The planning day as ISO "YYYY-MM-DD"; `today` is already resolved via resolveToday. */
+function isoDay(today: Date): string {
   return today.toISOString().slice(0, 10);
 }
 

@@ -12,6 +12,7 @@ import { BudgetPanel } from './BudgetPanel';
 import { ChecklistPanel } from './ChecklistPanel';
 import { IdeasPanel } from './IdeasPanel';
 import { TimelinePanel } from './TimelinePanel';
+import { WhatIfPanel } from './WhatIfPanel';
 import { WarningsBanner } from './WarningsBanner';
 import './plan.css';
 
@@ -127,6 +128,7 @@ export default function PlanDashboard({
         <a href="#refine-title">Tweak</a>
         <a href="#budget-title">Budget</a>
         <a href="#tracker-title">Spend</a>
+        <a href="#whatif-title">What if</a>
         <a href="#timeline-title">Timeline</a>
         <a href="#checklist-title">Checklist</a>
         <a href="#ideas-title">Ideas</a>
@@ -145,6 +147,11 @@ export default function PlanDashboard({
       <div className="dashboard__grid">
         <BudgetPanel budget={plan.budget} changes={lastRefine?.changes} />
         <SpendTracker budget={plan.budget} actuals={actuals} onChange={onActualChange} />
+        <WhatIfPanel
+          key={`${input.budget}-${input.guestCount}`}
+          input={input}
+          current={plan.budget}
+        />
         <TimelinePanel timeline={plan.timeline} today={today} />
         <ChecklistPanel items={plan.checklist} onToggle={onToggleItem} />
         <IdeasPanel ideas={ideas} aiStatus={aiStatus} />

@@ -1,5 +1,7 @@
 .dashboard {
   display: grid;
+  /* minmax(0, …) lets wide tables scroll inside their panel instead of widening the page. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -52,6 +54,9 @@
   gap: var(--space-2);
 }
 .jump-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: var(--space-1) var(--space-3);
   border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
@@ -70,6 +75,9 @@
   margin: 0;
 }
 
+.dashboard__grid > * {
+  min-width: 0;
+}
 .dashboard__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
@@ -419,7 +427,7 @@ tr[data-changed='true'] > * {
   width: 100%;
   min-width: 5.5rem;
   max-width: 8rem;
-  min-height: 40px;
+  min-height: 44px;
   font: inherit;
   color: var(--ink);
   background: var(--paper);
@@ -446,4 +454,46 @@ tr[data-changed='true'] > * {
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--sindoor-tint);
+}
+
+/* What-if sliders. */
+.slider {
+  margin-bottom: var(--space-3);
+}
+.slider output {
+  font-weight: 800;
+}
+.slider input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--accent-deep);
+  cursor: pointer;
+}
+.what-if__total {
+  margin: var(--space-2) 0 var(--space-3);
+}
+.what-if__amount {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.what-if__per-guest {
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.what-if__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.what-if__table th,
+.what-if__table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  border-bottom: 1px dashed var(--ink-soft);
+}
+.what-if__table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }

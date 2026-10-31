@@ -25,6 +25,21 @@ const EVENT_CARDS: ReadonlyArray<{ type: EventType; title: string; blurb: string
   },
 ];
 
+const HOW_IT_WORKS: ReadonlyArray<{ title: string; text: string }> = [
+  {
+    title: 'The engine does the maths',
+    text: 'Budget split, timeline and vendor checklist come from tested rules — every rupee adds up to your total and every date works back from the big day. No guesswork, even if the AI is down.',
+  },
+  {
+    title: 'The AI adds the personal touch',
+    text: 'A language model writes themes, menus and activities for your vibe, guests and traditions, and turns plain words like “cut 20%” into a safe, checked change. It never sets prices or dates.',
+  },
+  {
+    title: 'Your plan stays with you',
+    text: 'No sign-up and no database: your plan, ticks and spending live in this browser. Download it as a file, print it, or import it on another device.',
+  },
+];
+
 type HealthState =
   { kind: 'loading' } | { kind: 'ready'; health: HealthResponse } | { kind: 'error' };
 
@@ -84,6 +99,21 @@ export function Landing({ onStart, savedTitle, onOpenSaved, onImported }: Landin
           </li>
         ))}
       </ul>
+
+      <section className="how-it-works" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <ol>
+          {HOW_IT_WORKS.map((step, index) => (
+            <li key={step.title} className="how-card">
+              <span className="how-card__icon" aria-hidden="true">
+                {index + 1}
+              </span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section className="landing-import" aria-labelledby="import-title">
         <h2 id="import-title">Have a saved plan file?</h2>

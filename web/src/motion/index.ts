@@ -1,6 +1,7 @@
 /**
  * The only place GSAP is used, for the four moments where motion carries meaning:
- * wizard step change, plan reveal, confetti for a first plan and a finished checklist.
+ * wizard step change, plan reveal, confetti for a first plan and a finished checklist, and the
+ * what-if total counting up.
  * Every animation runs inside `gsap.matchMedia()`; the reduced-motion branch shows the
  * final state instantly. Each helper returns a cleanup that reverts its tweens.
  */
@@ -61,6 +62,34 @@ export function revealPlan(root: HTMLElement, options: { confetti: boolean }): C
       delay: 0.2,
     });
     return options.confetti ? burstConfetti() : undefined;
+  });
+}
+
+/**
+ * Counts `element`'s text from `from` to `to`. The final text is written first, so with
+ * reduced motion (or no GSAP media support) the number simply changes.
+ */
+export function countUp(
+  element: HTMLElement,
+  from: number,
+  to: number,
+  format: (value: number) => string,
+): Cleanup {
+  element.textContent = format(to);
+  if (from === to) return NO_MOTION;
+  return withMotion(() => {
+    const counter = { value: from };
+    gsap.to(counter, {
+      value: to,
+      duration: 0.6,
+      ease: 'power2.out',
+      onUpdate: () => {
+        element.textContent = format(Math.round(counter.value));
+      },
+    });
+    return () => {
+      element.textContent = format(to);
+    };
   });
 }
 

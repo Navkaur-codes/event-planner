@@ -5,8 +5,11 @@ import {
   type ApiErrorCode,
   type EventInput,
   type HealthResponse,
+  type PlanRequest,
   type PlanResponse,
 } from '@utsav/shared';
+import type { z } from 'zod';
+import { todayIso } from '../lib/clock';
 
 /** Error shown to people: always carries a friendly, non-technical message. */
 export class PlannerError extends Error {
@@ -37,27 +40,41 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
 }
 
 /**
- * Asks the API for a full plan. The response is schema-validated; every failure becomes a
- * `PlannerError` with friendly text. An abort rethrows the original `AbortError`.
+ * Asks the API for a full plan, sending the browser's local date so "today" matches the
+ * person's calendar (CCR-02). Every failure becomes a friendly `PlannerError`.
  */
-export async function createPlan(input: EventInput, signal?: AbortSignal): Promise<PlanResponse> {
+export function createPlan(input: EventInput, signal?: AbortSignal): Promise<PlanResponse> {
+  const body: PlanRequest = { ...input, clientToday: todayIso() };
+  return postJson('/api/plan', body, PlanResponseSchema, signal);
+}
+
+/**
+ * POSTs JSON and validates the reply with `schema`. An abort rethrows the original
+ * `AbortError`; anything else becomes a `PlannerError` with friendly text.
+ */
+async function postJson<T>(
+  path: string,
+  body: unknown,
+  schema: z.ZodType<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   let response: Response;
   try {
-    response = await fetch('/api/plan', {
+    response = await fetch(path, {
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify(body),
     });
   } catch (error) {
     if (signal?.aborted) throw error;
     throw new PlannerError(FRIENDLY.NETWORK, 'NETWORK');
   }
 
-  const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw toPlannerError(body);
+  const json: unknown = await response.json().catch(() => null);
+  if (!response.ok) throw toPlannerError(json);
 
-  const parsed = PlanResponseSchema.safeParse(body);
+  const parsed = schema.safeParse(json);
   if (!parsed.success) throw new PlannerError(FRIENDLY.BAD_RESPONSE, 'BAD_RESPONSE');
   return parsed.data;
 }

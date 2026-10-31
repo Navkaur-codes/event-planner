@@ -1,9 +1,13 @@
+import { PlanRequestSchema } from '@utsav/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { planRequest, planResponse } from '../mocks/fixtures';
 import { jsonResponse } from '../test/helpers';
 import { PlannerError, createPlan } from './client';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 async function failureOf(promise: Promise<unknown>): Promise<PlannerError> {
   const error = await promise.catch((e: unknown) => e);
@@ -12,6 +16,21 @@ async function failureOf(promise: Promise<unknown>): Promise<PlannerError> {
 }
 
 describe('createPlan', () => {
+  it("sends the browser's local date as clientToday (CCR-02)", async () => {
+    // Just after midnight locally: the UTC day may still be yesterday, the plan must not be.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 1, 0, 30));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(planResponse));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createPlan(planRequest);
+
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body: unknown = JSON.parse(init.body as string);
+    expect(body).toEqual({ ...planRequest, clientToday: '2026-11-01' });
+    expect(PlanRequestSchema.safeParse(body).success).toBe(true);
+  });
+
   it('returns the schema-validated plan', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(planResponse)));
     await expect(createPlan(planRequest)).resolves.toEqual(planResponse);

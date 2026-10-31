@@ -79,7 +79,7 @@ describe('Wizard', () => {
     expect(onEventTypeChange).toHaveBeenCalledWith('wedding');
   });
 
-  it('submits a schema-valid EventInput to POST /api/plan and hands back the plan', async () => {
+  it('submits a schema-valid PlanRequest with the local date and hands back the plan', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(planResponse));
     vi.stubGlobal('fetch', fetchMock);
     const { onPlanReady } = renderWizard();
@@ -115,6 +115,7 @@ describe('Wizard', () => {
       traditions: '',
       notes: '',
       language: 'en',
+      clientToday: '2026-10-31',
     });
   });
 

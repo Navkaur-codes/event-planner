@@ -51,27 +51,28 @@ export function allocateBudget(context: BudgetContext, total: number): BudgetPla
 
 function weighCategories(context: BudgetContext): WeightedCategory[] {
   const base = BASE_SPLITS[context.eventType];
-  const weighted = new Map<Priority, WeightedCategory>(
-    PRIORITIES.map((category) => [category, { category, weight: base[category], reasons: [] }]),
-  );
+  const weighted = Object.fromEntries(
+    PRIORITIES.map((category): [Priority, WeightedCategory] => [
+      category,
+      { category, weight: base[category], reasons: [] },
+    ]),
+  ) as Record<Priority, WeightedCategory>;
 
   for (const constraint of context.constraints) {
     for (const nudge of CONSTRAINT_NUDGES[constraint] ?? []) {
-      const entry = weighted.get(nudge.category);
-      if (!entry) continue;
+      const entry = weighted[nudge.category];
       entry.weight += nudge.addPercent;
       entry.reasons.push(`Includes ${nudge.note}`);
     }
   }
 
   for (const priority of context.priorities) {
-    const entry = weighted.get(priority);
-    if (!entry) continue;
+    const entry = weighted[priority];
     entry.weight = Math.max(entry.weight, PRIORITY_FLOOR_PERCENT) * PRIORITY_MULTIPLIER;
     entry.reasons.unshift('Boosted: your priority');
   }
 
-  return [...weighted.values()];
+  return PRIORITIES.map((category) => weighted[category]);
 }
 
 function describe(entry: WeightedCategory, context: BudgetContext): string {

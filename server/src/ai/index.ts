@@ -42,7 +42,8 @@ interface AiDependencies {
   cache?: LruCache<AiIdeas>;
 }
 
-const IDEAS_MAX_TOKENS = 1_200;
+// Covers a short hidden reasoning pass plus the ~700-token JSON answer.
+const IDEAS_MAX_TOKENS = 2_000;
 const IDEAS_TEMPERATURE = 0.7;
 const CACHE_LIMITS = { maxEntries: 200, ttlMs: 60 * 60 * 1_000 } as const;
 
@@ -84,8 +85,9 @@ export function createAiService({
           options.signal,
         );
         const latencyMs = Math.round(performance.now() - started);
-        const ideas = parseIdeas(completion.content);
-        if (!ideas) return fallback('invalid_output');
+        const parsed = parseIdeas(completion.content);
+        if (!parsed.ok) return fallback(`invalid_output:${parsed.failure}`);
+        const { ideas } = parsed;
         cache.set(key, ideas);
         logger.info('ai.ideas', {
           aiStatus: 'ai',

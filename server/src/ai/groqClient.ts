@@ -5,7 +5,14 @@
 import Groq from 'groq-sdk';
 
 export type AiFailureReason =
-  'timeout' | 'rate_limited' | 'upstream' | 'model_unavailable' | 'rejected' | 'aborted' | 'empty';
+  | 'timeout'
+  | 'rate_limited'
+  | 'upstream'
+  | 'model_unavailable'
+  | 'rejected'
+  | 'aborted'
+  | 'empty'
+  | 'truncated';
 
 /** A Groq call that did not produce content; `reason` is safe to log. */
 export class AiCallError extends Error {
@@ -46,7 +53,12 @@ const RETRYABLE: ReadonlySet<AiFailureReason> = new Set([
   'rate_limited',
   'upstream',
   'model_unavailable',
+  'truncated',
 ]);
+
+// Reasoning models spend completion tokens on hidden reasoning before the JSON;
+// keeping it short leaves room for the answer and cuts latency.
+const REASONING_MODEL = /^openai\/gpt-oss/;
 
 let cachedClient: { apiKey: string; client: Groq } | undefined;
 
@@ -60,7 +72,7 @@ function clientFor(apiKey: string): Groq {
 
 /**
  * Requests a JSON-object completion from the primary model, retrying once on the
- * fallback model after a timeout, 429 or 5xx.
+ * fallback model after a timeout, 429, 5xx, 404 or a truncated answer.
  * @throws AiCallError when no attempt returns content.
  */
 export async function completeJson(
@@ -106,11 +118,17 @@ async function attempt(
         ],
         response_format: { type: 'json_object' },
         temperature: request.temperature,
-        max_tokens: request.maxTokens,
+        max_completion_tokens: request.maxTokens,
+        ...(REASONING_MODEL.test(model)
+          ? { reasoning_effort: 'low' as const, include_reasoning: false }
+          : {}),
       },
       { signal: controller.signal },
     );
-    const content = completion.choices[0]?.message.content;
+    const choice = completion.choices[0];
+    // A cut-off answer can still be valid JSON (missing fields), so reject it here.
+    if (choice?.finish_reason === 'length') throw new AiCallError('truncated');
+    const content = choice?.message.content;
     if (!content) throw new AiCallError('empty');
     return content;
   } catch (error) {

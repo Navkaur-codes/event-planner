@@ -103,6 +103,59 @@ describe('POST /api/plan', () => {
   });
 });
 
+describe('clientToday (CCR-02: plan with the browser’s local date)', () => {
+  // 18:00 UTC is 23:30 IST: an Indian user is already on the next calendar day.
+  const serverNow = new Date('2026-11-05T18:00:00Z');
+  const istTomorrow = '2026-11-06';
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: serverNow, toFake: ['Date'] });
+  });
+
+  it('plans from the client’s day just after local midnight, and strips clientToday', async () => {
+    const res = await postPlan({
+      ...birthdayInput,
+      eventDate: istTomorrow,
+      clientToday: istTomorrow,
+    });
+    expect(res.status).toBe(200);
+    const body = PlanResponseSchema.parse(res.body);
+    expect(body.plan.generatedAt.slice(0, 10)).toBe(istTomorrow);
+    expect(body.plan.input).not.toHaveProperty('clientToday');
+  });
+
+  it('rejects a date that is already past on the client’s calendar', async () => {
+    const res = await postPlan({
+      ...birthdayInput,
+      eventDate: '2026-11-05',
+      clientToday: istTomorrow,
+    });
+    expect(res.status).toBe(400);
+    expect(ApiErrorSchema.parse(res.body).error.issues?.[0]?.path).toBe('eventDate');
+  });
+
+  it('ignores an implausible clientToday and uses the server day', async () => {
+    const res = await postPlan({ ...birthdayInput, clientToday: '2027-03-01' });
+    expect(res.status).toBe(200);
+    expect(PlanResponseSchema.parse(res.body).plan.generatedAt.slice(0, 10)).toBe('2026-11-05');
+  });
+
+  it('rejects a malformed clientToday', async () => {
+    const res = await postPlan({ ...birthdayInput, clientToday: 'tomorrow' });
+    expect(res.status).toBe(400);
+    expect(ApiErrorSchema.parse(res.body).error.issues?.[0]?.path).toBe('clientToday');
+  });
+
+  it('applies to /refine too', async () => {
+    const res = await request(app)
+      .post('/api/refine')
+      .send({ input: birthdayInput, message: 'More fun games', clientToday: istTomorrow });
+    expect(res.status).toBe(200);
+    const body = RefineResponseSchema.parse(res.body);
+    expect(body.result.plan.generatedAt.slice(0, 10)).toBe(istTomorrow);
+  });
+});
+
 describe('POST /api/refine', () => {
   it('returns 200 with a contract-valid RefineResponse', async () => {
     const res = await request(app)

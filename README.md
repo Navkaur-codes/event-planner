@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** 🚧 v0.1 — scaffold ready: shared contracts, secure API skeleton, festive landing page, CI and deploy config. Planning engine, AI ideas and the planner UI arrive in v0.2. This README is updated at every milestone.
+> **Status:** ✅ v0.2 — the full core flow is live: 4-step wizard → plan with an exact budget, a backwards timeline, a constraint-aware vendor checklist, warnings and personalized AI ideas (English or Hindi), saved in your browser. Next (v0.3): plain-language refine ("cut the budget by 20%"), spend tracking and export. This README is updated at every milestone.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com · **Demo video:** _coming soon_
 
 ---
@@ -28,6 +28,16 @@ Utsav splits the work between two layers so each does what it is best at:
 - **Warnings** flag unrealistic budgets per guest for the event type and city tier, very short lead times and conflicting choices.
 - **AI ideas** must respect every dietary and accessibility constraint and are validated against a strict schema. The AI **never** sets prices or dates.
 - **Refine** ("cut the budget by 20%", "make it eco-friendly") — the AI turns the request into a structured, validated change; the engine recomputes the plan.
+
+## Try it in 2 minutes
+1. Open the live demo and pick **Weddings**, **Birthdays** or **Community events**.
+2. Fill the 4 short steps — basics, budget and top priorities, style (vibe, traditions, language), needs (dietary, accessibility, eco-friendly…).
+3. Press **Make my plan** and get:
+   - **Budget** split by category; your priorities get a bigger share, every line adds up exactly, with a 10% contingency.
+   - **Timeline** counted back from the big day, compressed (with a warning) if the date is close.
+   - **Vendor checklist** that changes with your needs (e.g. Jain/halal caterer checks, wheelchair access, permits for large crowds).
+   - **Ideas for you** — themes, decor, food, activities, personal touches and questions to ask vendors, written by the AI for your city, vibe and traditions.
+4. Close the tab and come back — your plan is still there.
 
 ## How it works
 ```

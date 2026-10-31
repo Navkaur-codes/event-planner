@@ -8,14 +8,15 @@ const EXCLUSIVE: Partial<Record<Constraint, Constraint>> = { outdoor: 'indoor', 
 /**
  * Applies a refinement patch and returns a new input. An absolute `budget` wins over
  * `budgetChangePercent`; numbers are rounded and clamped to the input limits; constraints are
- * set operations. `ideaFocus` only steers AI ideas, so it is not stored on the input.
+ * set operations; priorities are replaced (unique, at most three). `ideaFocus` only steers AI
+ * ideas, so it is not stored on the input.
  */
 export function applyPatch(input: EventInput, patch: PlanPatch): EventInput {
   const rawBudget =
     patch.budget ??
     (patch.budgetChangePercent === undefined
       ? input.budget
-      : input.budget * (1 + patch.budgetChangePercent / 100));
+      : input.budget + (input.budget * patch.budgetChangePercent) / 100);
 
   return {
     ...input,
@@ -27,7 +28,9 @@ export function applyPatch(input: EventInput, patch: PlanPatch): EventInput {
     ),
     eventDate: patch.eventDate ?? input.eventDate,
     constraints: patchConstraints(input.constraints, patch),
-    priorities: patch.priorities ? [...patch.priorities] : [...input.priorities],
+    priorities: patch.priorities
+      ? [...new Set(patch.priorities)].slice(0, LIMITS.maxPriorities)
+      : [...input.priorities],
     vibe: patch.vibe === undefined ? input.vibe : patch.vibe.trim(),
   };
 }

@@ -1,41 +1,36 @@
-import type { EventType, HealthResponse } from '@utsav/shared';
-import { useEffect, useState } from 'react';
-import { getHealth } from './api/client';
+import type { EventType, PlanResponse } from '@utsav/shared';
+import { lazy, Suspense, useCallback, useEffect } from 'react';
+import { Landing } from './features/landing/Landing';
+import { Wizard } from './features/wizard/Wizard';
+import { usePlanStore } from './state/usePlanStore';
 
-const EVENT_CARDS: ReadonlyArray<{ type: EventType; title: string; blurb: string }> = [
-  {
-    type: 'wedding',
-    title: 'Weddings',
-    blurb: 'Ceremonies, mehendi to reception — budget, vendors and rituals in one plan.',
-  },
-  {
-    type: 'birthday',
-    title: 'Birthdays',
-    blurb: 'From first birthdays to fiftieths — themes, cake, games and a guest-ready timeline.',
-  },
-  {
-    type: 'community',
-    title: 'Community events',
-    blurb: 'Festivals, fundraisers and meet-ups — permits, logistics and volunteers sorted.',
-  },
-];
+// The dashboard (and the GSAP chunk it pulls in) is split out of the first page load and
+// prefetched while the wizard is open, so the plan appears without a wait.
+const loadDashboard = () => import('./features/plan/PlanDashboard');
+const PlanDashboard = lazy(loadDashboard);
 
-type HealthState =
-  { kind: 'loading' } | { kind: 'ready'; health: HealthResponse } | { kind: 'error' };
-
-/** Step 0 landing page: introduces Utsav and confirms the API is reachable. */
+/** Root: landing → wizard → plan dashboard, themed by the chosen event type. */
 export function App() {
-  const [state, setState] = useState<HealthState>({ kind: 'loading' });
+  const [state, dispatch] = usePlanStore();
+  const { view, eventType, response } = state;
 
   useEffect(() => {
-    const controller = new AbortController();
-    getHealth(controller.signal)
-      .then((health) => setState({ kind: 'ready', health }))
-      .catch(() => {
-        if (!controller.signal.aborted) setState({ kind: 'error' });
-      });
-    return () => controller.abort();
-  }, []);
+    if (eventType) document.body.dataset.event = eventType;
+    else delete document.body.dataset.event;
+  }, [eventType]);
+
+  useEffect(() => {
+    if (view === 'wizard') void loadDashboard();
+  }, [view]);
+
+  const handlePlanReady = useCallback(
+    (planResponse: PlanResponse) => dispatch({ type: 'planReady', response: planResponse }),
+    [dispatch],
+  );
+  const handleEventTypeChange = useCallback(
+    (type: EventType) => dispatch({ type: 'setEventType', eventType: type }),
+    [dispatch],
+  );
 
   return (
     <>
@@ -45,42 +40,41 @@ export function App() {
       <div className="bunting" aria-hidden="true" />
       <div className="bunting bunting--rani" aria-hidden="true" />
       <main id="main" className="page">
-        <header className="hero">
-          <h1>
-            <span className="hero__mark">Utsav</span>
-          </h1>
-          <p>
-            Plan your celebration with a budget that adds up, a timeline that works backwards from
-            the big day, a vendor checklist, and ideas made just for you.
-          </p>
-        </header>
-
-        <ul className="event-cards" aria-label="Events Utsav can plan">
-          {EVENT_CARDS.map((card) => (
-            <li key={card.type} className="sticker" data-event={card.type}>
-              <h2>{card.title}</h2>
-              <p>{card.blurb}</p>
-            </li>
-          ))}
-        </ul>
-
-        <footer className="site-footer">
-          <p className="status-pill" role="status" aria-live="polite">
-            {statusText(state)}
-          </p>
-        </footer>
+        {view === 'landing' && (
+          <Landing
+            onStart={(type) => dispatch({ type: 'start', eventType: type })}
+            savedTitle={response?.plan.input.title ?? null}
+            onOpenSaved={() => dispatch({ type: 'openPlan' })}
+          />
+        )}
+        {view === 'wizard' && (
+          <Wizard
+            eventType={eventType ?? 'wedding'}
+            source={state.draftSource}
+            onEventTypeChange={handleEventTypeChange}
+            onPlanReady={handlePlanReady}
+            onExit={() => dispatch({ type: 'home' })}
+          />
+        )}
+        {view === 'plan' && response && (
+          <Suspense
+            fallback={
+              <p className="status-pill" role="status">
+                Opening your plan…
+              </p>
+            }
+          >
+            <PlanDashboard
+              response={response}
+              celebrated={state.celebrated}
+              onCelebrated={() => dispatch({ type: 'celebrated' })}
+              onToggleItem={(id) => dispatch({ type: 'toggleItem', id })}
+              onEdit={() => dispatch({ type: 'edit' })}
+              onNewEvent={() => dispatch({ type: 'home' })}
+            />
+          </Suspense>
+        )}
       </main>
     </>
   );
-}
-
-function statusText(state: HealthState): string {
-  switch (state.kind) {
-    case 'loading':
-      return 'Checking the planner…';
-    case 'error':
-      return 'Planner is offline right now — please try again soon.';
-    case 'ready':
-      return `Planner ready · v${state.health.version}${state.health.aiConfigured ? ' · AI ideas on' : ''}`;
-  }
 }

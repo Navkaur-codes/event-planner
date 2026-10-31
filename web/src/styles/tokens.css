@@ -1,4 +1,12 @@
-/* "Mela" design tokens — joyful, festive, WCAG AA on every text pair. */
+/*
+ * "Mela" design tokens — joyful, festive, WCAG AA on every text pair.
+ * Measured contrast (text on background):
+ *   ink on paper 15.6 · ink on marigold 9.0 · ink on mint 8.0 · ink on every *-tint ≥ 12
+ *   white on rani-deep 7.3 · white on peacock 5.7 · ink-soft on paper 7.5
+ *   rani-deep / mint-deep / peacock-deep / sindoor-deep on paper ≥ 5.5
+ *   ink on every --accent-mark (underline behind text) ≥ 6.7
+ * Bright fills (rani, mint, marigold) are decoration or carry ink text only — never white.
+ */
 :root {
   --paper: #fff6e9;
   --ink: #2b1b3d;
@@ -11,15 +19,30 @@
   --lilac-tint: #eadcf8;
   --white: #ffffff;
 
+  /* Deep variants: for coloured text and white-text fills. */
+  --rani-deep: #a8173f;
+  --mint-deep: #0b6b66;
+  --peacock-deep: #15586f;
+  --sindoor-deep: #b23a10;
+  --marigold-deep: #8a5a00;
+  --sindoor-tint: #fde3d8;
+
+  /* Per-event theme. Default (no event chosen yet) is marigold. */
   --accent: var(--marigold);
   --accent-tint: #fff0cc;
+  --accent-deep: var(--marigold-deep);
+  --accent-btn: var(--marigold);
+  --on-accent-btn: var(--ink);
+  --accent-mark: var(--marigold);
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --radius: 18px;
+  --radius-sm: 10px;
   --radius-pill: 999px;
   --shadow-sticker: 4px 5px 0 var(--ink);
+  --shadow-sticker-sm: 2px 3px 0 var(--ink);
   --focus-ring: 0 0 0 3px var(--paper), 0 0 0 6px var(--ink);
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -29,16 +52,28 @@
   --space-6: 4rem;
 }
 
-/* The chosen event type re-themes the whole UI. */
+/* The chosen event type re-themes the whole UI (set on <body> and on landing cards). */
 [data-event='wedding'] {
   --accent: var(--rani);
   --accent-tint: #fbdbe4;
+  --accent-deep: var(--rani-deep);
+  --accent-btn: var(--rani-deep);
+  --on-accent-btn: var(--white);
+  --accent-mark: #f28aa5;
 }
 [data-event='birthday'] {
   --accent: var(--mint);
   --accent-tint: #d5f5f3;
+  --accent-deep: var(--mint-deep);
+  --accent-btn: var(--mint);
+  --on-accent-btn: var(--ink);
+  --accent-mark: var(--mint);
 }
 [data-event='community'] {
   --accent: var(--peacock);
   --accent-tint: #d3e8ef;
+  --accent-deep: var(--peacock-deep);
+  --accent-btn: var(--peacock);
+  --on-accent-btn: var(--white);
+  --accent-mark: #7fc3d6;
 }

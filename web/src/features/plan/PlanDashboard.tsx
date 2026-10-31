@@ -1,8 +1,13 @@
-import type { PlanResponse } from '@utsav/shared';
-import { useLayoutEffect, useRef, useState } from 'react';
+import type { BudgetCategory, PlanResponse, RefineResponse } from '@utsav/shared';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { daysBetween, todayIso } from '../../lib/clock';
 import { CITY_TIER_LABELS, EVENT_LABELS, formatDate, formatMoney } from '../../lib/labels';
-import { revealPlan } from '../../motion';
+import { celebrate, revealPlan } from '../../motion';
+import type { Actuals, SavedPlan } from '../../state/storage';
+import type { LastRefine } from '../../state/usePlanStore';
+import { RefineBox } from '../refine/RefineBox';
+import { PlanTools } from '../track/PlanTools';
+import { SpendTracker } from '../track/SpendTracker';
 import { BudgetPanel } from './BudgetPanel';
 import { ChecklistPanel } from './ChecklistPanel';
 import { IdeasPanel } from './IdeasPanel';
@@ -14,8 +19,13 @@ interface PlanDashboardProps {
   response: PlanResponse;
   /** False until the first-plan confetti has played for this plan. */
   celebrated: boolean;
+  actuals: Actuals;
+  lastRefine: LastRefine | null;
   onCelebrated: () => void;
   onToggleItem: (id: string) => void;
+  onRefined: (response: RefineResponse) => void;
+  onActualChange: (category: BudgetCategory, amount: number | null) => void;
+  onImported: (saved: SavedPlan) => void;
   onEdit: () => void;
   onNewEvent: () => void;
 }
@@ -27,12 +37,17 @@ function countdownText(days: number): string {
   return 'This date has passed';
 }
 
-/** The living plan: countdown, warnings, budget, timeline, checklist and ideas. */
+/** The living plan: countdown, warnings, refine, budget, tracker, timeline, checklist, ideas. */
 export default function PlanDashboard({
   response,
   celebrated,
+  actuals,
+  lastRefine,
   onCelebrated,
   onToggleItem,
+  onRefined,
+  onActualChange,
+  onImported,
   onEdit,
   onNewEvent,
 }: PlanDashboardProps) {
@@ -43,6 +58,8 @@ export default function PlanDashboard({
   const rootRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [isFirstReveal] = useState(() => !celebrated);
+  const allDone = plan.checklist.length > 0 && plan.checklist.every((item) => item.done);
+  const wasAllDone = useRef(allDone);
 
   // Reveal once per visit to the dashboard; confetti only the first time a plan is shown.
   useLayoutEffect(() => {
@@ -54,6 +71,15 @@ export default function PlanDashboard({
     // Runs on mount only: the reveal is a one-off moment, not a reaction to edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Confetti the moment the last checklist item is ticked (not when a finished plan loads).
+  useEffect(() => {
+    const justFinished = allDone && !wasAllDone.current;
+    wasAllDone.current = allDone;
+    return justFinished ? celebrate() : undefined;
+  }, [allDone]);
+
+  const saved: SavedPlan = { version: 2, response, celebrated: true, actuals };
 
   return (
     <div className="dashboard" ref={rootRef}>
@@ -87,7 +113,7 @@ export default function PlanDashboard({
             <dd>{formatMoney(plan.budget.total, plan.budget.currency)}</dd>
           </div>
         </dl>
-        <div className="button-row">
+        <div className="button-row no-print">
           <button type="button" className="button button--primary" onClick={onEdit}>
             Edit details
           </button>
@@ -97,17 +123,28 @@ export default function PlanDashboard({
         </div>
       </header>
 
-      <nav className="jump-nav" aria-label="Plan sections">
+      <nav className="jump-nav no-print" aria-label="Plan sections">
+        <a href="#refine-title">Tweak</a>
         <a href="#budget-title">Budget</a>
+        <a href="#tracker-title">Spend</a>
         <a href="#timeline-title">Timeline</a>
         <a href="#checklist-title">Checklist</a>
         <a href="#ideas-title">Ideas</a>
       </nav>
 
+      <PlanTools saved={saved} onImported={onImported} />
+
       <WarningsBanner warnings={plan.warnings} />
 
+      <RefineBox
+        input={input}
+        explanation={lastRefine?.explanation ?? null}
+        onRefined={onRefined}
+      />
+
       <div className="dashboard__grid">
-        <BudgetPanel budget={plan.budget} />
+        <BudgetPanel budget={plan.budget} changes={lastRefine?.changes} />
+        <SpendTracker budget={plan.budget} actuals={actuals} onChange={onActualChange} />
         <TimelinePanel timeline={plan.timeline} today={today} />
         <ChecklistPanel items={plan.checklist} onToggle={onToggleItem} />
         <IdeasPanel ideas={ideas} aiStatus={aiStatus} />

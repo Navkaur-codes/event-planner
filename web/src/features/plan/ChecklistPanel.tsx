@@ -19,6 +19,9 @@ export function ChecklistPanel({
       <div className="progress">
         <label htmlFor="checklist-progress" className="progress__label">
           {done} of {items.length} done · {percent}%
+          {items.length > 0 &&
+            done === items.length &&
+            ' — everything’s ticked, time to celebrate!'}
         </label>
         <progress id="checklist-progress" max={items.length || 1} value={done} />
       </div>

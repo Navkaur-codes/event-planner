@@ -1,7 +1,8 @@
-import type { EventType, PlanResponse } from '@utsav/shared';
+import type { BudgetCategory, EventType, PlanResponse, RefineResponse } from '@utsav/shared';
 import { lazy, Suspense, useCallback, useEffect } from 'react';
 import { Landing } from './features/landing/Landing';
 import { Wizard } from './features/wizard/Wizard';
+import type { SavedPlan } from './state/storage';
 import { usePlanStore } from './state/usePlanStore';
 
 // The dashboard (and the GSAP chunk it pulls in) is split out of the first page load and
@@ -27,6 +28,20 @@ export function App() {
     (planResponse: PlanResponse) => dispatch({ type: 'planReady', response: planResponse }),
     [dispatch],
   );
+  const handleRefined = useCallback(
+    (refined: RefineResponse) =>
+      dispatch({ type: 'refined', response: refined.result, explanation: refined.explanation }),
+    [dispatch],
+  );
+  const handleActualChange = useCallback(
+    (category: BudgetCategory, amount: number | null) =>
+      dispatch({ type: 'setActual', category, amount }),
+    [dispatch],
+  );
+  const handleImported = useCallback(
+    (saved: SavedPlan) => dispatch({ type: 'imported', saved }),
+    [dispatch],
+  );
   const handleEventTypeChange = useCallback(
     (type: EventType) => dispatch({ type: 'setEventType', eventType: type }),
     [dispatch],
@@ -45,6 +60,7 @@ export function App() {
             onStart={(type) => dispatch({ type: 'start', eventType: type })}
             savedTitle={response?.plan.input.title ?? null}
             onOpenSaved={() => dispatch({ type: 'openPlan' })}
+            onImported={handleImported}
           />
         )}
         {view === 'wizard' && (
@@ -65,10 +81,16 @@ export function App() {
             }
           >
             <PlanDashboard
+              key={state.planId}
               response={response}
               celebrated={state.celebrated}
+              actuals={state.actuals}
+              lastRefine={state.lastRefine}
               onCelebrated={() => dispatch({ type: 'celebrated' })}
               onToggleItem={(id) => dispatch({ type: 'toggleItem', id })}
+              onRefined={handleRefined}
+              onActualChange={handleActualChange}
+              onImported={handleImported}
               onEdit={() => dispatch({ type: 'edit' })}
               onNewEvent={() => dispatch({ type: 'home' })}
             />

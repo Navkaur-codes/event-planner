@@ -1,0 +1,74 @@
+/* A clean A4 copy of the plan: content only, no controls, no decoration. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: none;
+    font-size: 10.5pt;
+  }
+
+  .bunting,
+  .skip-link,
+  .no-print,
+  .confetti-layer,
+  .event-card__cta,
+  button,
+  input[type='file'] {
+    display: none !important;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .sticker,
+  .panel,
+  .theme-card {
+    transform: none;
+    box-shadow: none;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+  }
+  .panel {
+    padding: 4mm;
+    break-inside: avoid;
+  }
+  .panel::before {
+    display: none;
+  }
+
+  .dashboard,
+  .dashboard__grid {
+    display: block;
+  }
+  .dashboard > *,
+  .dashboard__grid > * {
+    margin-bottom: 5mm;
+  }
+
+  /* Keep the bars and status tints; browsers drop backgrounds by default. */
+  .bar,
+  .bar-track,
+  .facts div,
+  .spend--over,
+  tr[data-changed='true'] > * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .tracker-input {
+    border: 0;
+    background: none;
+    padding: 0;
+    width: auto;
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+}

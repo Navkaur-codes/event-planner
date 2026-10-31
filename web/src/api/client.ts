@@ -2,11 +2,14 @@ import {
   ApiErrorSchema,
   HealthResponseSchema,
   PlanResponseSchema,
+  RefineResponseSchema,
   type ApiErrorCode,
   type EventInput,
   type HealthResponse,
   type PlanRequest,
   type PlanResponse,
+  type RefineRequest,
+  type RefineResponse,
 } from '@utsav/shared';
 import type { z } from 'zod';
 import { todayIso } from '../lib/clock';
@@ -46,6 +49,19 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
 export function createPlan(input: EventInput, signal?: AbortSignal): Promise<PlanResponse> {
   const body: PlanRequest = { ...input, clientToday: todayIso() };
   return postJson('/api/plan', body, PlanResponseSchema, signal);
+}
+
+/**
+ * Asks the API to change the plan from a plain-words request; the engine recalculates every
+ * number and the reply carries the structured patch, an explanation and the new plan.
+ */
+export function refinePlan(
+  input: EventInput,
+  message: string,
+  signal?: AbortSignal,
+): Promise<RefineResponse> {
+  const body: RefineRequest = { input, message, clientToday: todayIso() };
+  return postJson('/api/refine', body, RefineResponseSchema, signal);
 }
 
 /**

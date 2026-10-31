@@ -1,6 +1,6 @@
 /**
  * The only place GSAP is used, for the four moments where motion carries meaning:
- * wizard step change, plan reveal, first-plan confetti (and later count-up).
+ * wizard step change, plan reveal, confetti for a first plan and a finished checklist.
  * Every animation runs inside `gsap.matchMedia()`; the reduced-motion branch shows the
  * final state instantly. Each helper returns a cleanup that reverts its tweens.
  */
@@ -62,6 +62,11 @@ export function revealPlan(root: HTMLElement, options: { confetti: boolean }): C
     });
     return options.confetti ? burstConfetti() : undefined;
   });
+}
+
+/** Confetti for a finished checklist (nothing with reduced motion). */
+export function celebrate(): Cleanup {
+  return withMotion(burstConfetti);
 }
 
 /** A short burst of paper confetti from the top of the screen; decorative only. */

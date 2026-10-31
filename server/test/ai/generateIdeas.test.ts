@@ -40,8 +40,57 @@ describe('generateIdeas', () => {
     expect(body).toMatchObject({
       model: testConfig().groqModel,
       response_format: { type: 'json_object' },
-      max_tokens: 1_200,
+      max_completion_tokens: 2_000,
+      reasoning_effort: 'low',
+      include_reasoning: false,
     });
+  });
+
+  it('sends reasoning options only to gpt-oss reasoning models', async () => {
+    create.mockResolvedValue(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService(testConfig({ groqModel: 'qwen/qwen3.8-27b' }));
+    await service.generateIdeas(birthdayInput, plan);
+    const [body] = create.mock.calls[0] ?? [];
+    expect(body).not.toHaveProperty('reasoning_effort');
+    expect(body).not.toHaveProperty('include_reasoning');
+  });
+
+  // GATE-1 regression: gpt-oss spent its token budget on reasoning, and Groq returned
+  // parseable JSON cut off after "themes" with finish_reason "length".
+  const truncatedAnswer = {
+    choices: [
+      {
+        finish_reason: 'length',
+        message: { content: JSON.stringify({ summary: aiIdeas.summary, themes: aiIdeas.themes }) },
+      },
+    ],
+  };
+
+  it('treats a truncated answer as a failure and retries on the fallback model', async () => {
+    create
+      .mockResolvedValueOnce(truncatedAnswer)
+      .mockResolvedValueOnce(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result).toEqual({ ideas: aiIdeas, aiStatus: 'ai' });
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back and logs "truncated" when both models run out of tokens', async () => {
+    create.mockResolvedValue(truncatedAnswer);
+    const { service, lines } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result.aiStatus).toBe('fallback');
+    expect(lines.join('\n')).toContain('"reason":"truncated"');
+  });
+
+  it('logs which fields failed validation, without their content', async () => {
+    create.mockResolvedValue(completion(JSON.stringify({ summary: 'private plan text' })));
+    const { service, lines } = makeService();
+    await service.generateIdeas(birthdayInput, plan);
+    const log = lines.join('\n');
+    expect(log).toContain('"reason":"invalid_output:schema:themes,decor,food');
+    expect(log).not.toContain('private plan text');
   });
 
   it.each([

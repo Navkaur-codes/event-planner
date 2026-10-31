@@ -1,4 +1,5 @@
 export * from './contracts.js';
+export { CLIENT_TODAY_TOLERANCE_DAYS, resolveToday } from './today.js';
 export {
   applyPatch,
   buildPlan,

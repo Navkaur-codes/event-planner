@@ -22,7 +22,7 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
       - run: npm run build
       - name: Secret scan of the built web app
         run: npm run secret-scan

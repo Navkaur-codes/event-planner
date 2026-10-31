@@ -14,5 +14,13 @@ export default defineConfig({
     proxy: { '/api': 'http://localhost:3000' },
   },
   build: { sourcemap: false, target: 'es2022' },
-  test: { environment: 'jsdom' },
+  test: {
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}'],
+      reporter: ['text-summary'],
+    },
+  },
 });

@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 /** Treats empty strings as "not set" so `KEY=` in .env falls back to defaults. */
 const optional = <T extends z.ZodType>(schema: T) =>

@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 
-export const CONTRACTS_VERSION = 'v1';
+export const CONTRACTS_VERSION = 'v1.1';
 
 // ---------------------------------------------------------------- helpers
 
@@ -192,9 +192,19 @@ export const PlanResponseSchema = z.strictObject({
 
 // ---------------------------------------------------------------- refine
 
+/**
+ * The browser's local calendar date. Optional: the server falls back to its own date and
+ * accepts this only when it is within one day of it (see `resolveToday`).
+ */
+const clientToday = isoDate.optional();
+
+/** POST /api/plan body: the event plus the browser's local date. */
+export const PlanRequestSchema = z.strictObject({ ...EventInputSchema.shape, clientToday });
+
 export const RefineRequestSchema = z.strictObject({
   input: EventInputSchema,
   message: requiredText(LIMITS.refineMessage),
+  clientToday,
 });
 
 export const PlanPatchSchema = z.strictObject({
@@ -259,6 +269,7 @@ export type EnginePlan = z.infer<typeof EnginePlanSchema>;
 export type ThemeIdea = z.infer<typeof ThemeIdeaSchema>;
 export type AiIdeas = z.infer<typeof AiIdeasSchema>;
 export type PlanResponse = z.infer<typeof PlanResponseSchema>;
+export type PlanRequest = z.infer<typeof PlanRequestSchema>;
 export type RefineRequest = z.infer<typeof RefineRequestSchema>;
 export type PlanPatch = z.infer<typeof PlanPatchSchema>;
 export type RefineResponse = z.infer<typeof RefineResponseSchema>;

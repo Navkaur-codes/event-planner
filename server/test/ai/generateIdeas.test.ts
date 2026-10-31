@@ -38,7 +38,7 @@ describe('generateIdeas', () => {
     expect(result).toEqual({ ideas: aiIdeas, aiStatus: 'ai' });
     const [body] = create.mock.calls[0] ?? [];
     expect(body).toMatchObject({
-      model: 'llama-3.3-70b-versatile',
+      model: testConfig().groqModel,
       response_format: { type: 'json_object' },
       max_tokens: 1_200,
     });
@@ -74,9 +74,10 @@ describe('generateIdeas', () => {
     const { service } = makeService();
     const result = await service.generateIdeas(birthdayInput, plan);
     expect(result.aiStatus).toBe('ai');
+    const { groqModel, groqFallbackModel } = testConfig();
     expect(create.mock.calls.map(([body]) => (body as { model: string }).model)).toEqual([
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant',
+      groqModel,
+      groqFallbackModel,
     ]);
   });
 

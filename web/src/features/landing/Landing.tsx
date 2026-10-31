@@ -1,6 +1,8 @@
 import type { EventType, HealthResponse } from '@utsav/shared';
 import { useEffect, useState } from 'react';
 import { getHealth } from '../../api/client';
+import type { SavedPlan } from '../../state/storage';
+import { ImportPlanButton } from '../track/ImportPlanButton';
 
 const EVENT_CARDS: ReadonlyArray<{ type: EventType; title: string; blurb: string; cta: string }> = [
   {
@@ -31,10 +33,11 @@ interface LandingProps {
   /** Title of a saved plan, offered as "continue". */
   savedTitle: string | null;
   onOpenSaved: () => void;
+  onImported: (saved: SavedPlan) => void;
 }
 
 /** Landing page: three event cards that start the wizard, plus the planner status. */
-export function Landing({ onStart, savedTitle, onOpenSaved }: LandingProps) {
+export function Landing({ onStart, savedTitle, onOpenSaved, onImported }: LandingProps) {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
 
   useEffect(() => {
@@ -81,6 +84,11 @@ export function Landing({ onStart, savedTitle, onOpenSaved }: LandingProps) {
           </li>
         ))}
       </ul>
+
+      <section className="landing-import" aria-labelledby="import-title">
+        <h2 id="import-title">Have a saved plan file?</h2>
+        <ImportPlanButton onImported={onImported} />
+      </section>
 
       <footer className="site-footer">
         <p className="status-pill" role="status" aria-live="polite">

@@ -523,3 +523,21 @@ body[data-event] .bunting--rani {
     animation-iteration-count: 1 !important;
   }
 }
+
+.landing-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.landing-import h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.import-plan {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 28rem;
+}

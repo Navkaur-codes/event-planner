@@ -1,10 +1,11 @@
 import type { EventInput, EventType, PlanResponse } from '@utsav/shared';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { createPlan } from '../../api/client';
+import { useCancellableRequest } from '../../api/useCancellableRequest';
 import { todayIso } from '../../lib/clock';
 import { loadMotion, motionIfLoaded } from '../../motion/load';
 import { ErrorPanel, LoadingPanel } from './RequestPanels';
 import { STEP_COMPONENTS } from './steps';
-import { usePlanRequest } from './usePlanRequest';
 import {
   STEPS,
   draftFromInput,
@@ -44,7 +45,7 @@ export function Wizard({ eventType, source, onEventTypeChange, onPlanReady, onEx
   const [stepIndex, setStepIndex] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [errorFocusRequest, setErrorFocusRequest] = useState(0);
-  const { state: request, submit, cancel } = usePlanRequest(onPlanReady);
+  const { state: request, submit, cancel } = useCancellableRequest(createPlan, onPlanReady);
 
   const formRef = useRef<HTMLFormElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -139,7 +140,7 @@ export function Wizard({ eventType, source, onEventTypeChange, onPlanReady, onEx
       {request.status === 'error' && (
         <ErrorPanel
           error={request.error}
-          onRetry={() => void submit(request.input)}
+          onRetry={() => void submit(request.args)}
           onEdit={cancel}
         />
       )}

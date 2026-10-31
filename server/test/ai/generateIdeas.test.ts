@@ -150,6 +150,26 @@ describe('generateIdeas', () => {
     expect(create).toHaveBeenCalledTimes(2);
   });
 
+  it('retries on the fallback model when the primary answer fails validation', async () => {
+    create
+      .mockResolvedValueOnce(completion(JSON.stringify({ ...aiIdeas, personalTouches: [] })))
+      .mockResolvedValueOnce(completion(JSON.stringify(aiIdeas)));
+    const { service, lines } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result).toEqual({ ideas: aiIdeas, aiStatus: 'ai' });
+    const models = create.mock.calls.map(([body]) => (body as { model: string }).model);
+    expect(models).toEqual([testConfig().groqModel, testConfig().groqFallbackModel]);
+    expect(lines.join('\n')).toContain(`"model":"${testConfig().groqFallbackModel}"`);
+  });
+
+  it('reports the fallback model’s validation failure when both answers are unusable', async () => {
+    create.mockResolvedValue(completion(JSON.stringify({ ...aiIdeas, personalTouches: [] })));
+    const { service, lines } = makeService();
+    expect((await service.generateIdeas(birthdayInput, plan)).aiStatus).toBe('fallback');
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(lines.join('\n')).toContain('invalid_output:schema:personalTouches');
+  });
+
   it('does not retry on other 4xx errors', async () => {
     create.mockRejectedValue(httpError(400));
     const { service } = makeService();

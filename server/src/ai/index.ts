@@ -15,36 +15,48 @@ import { isAiConfigured, loadConfig, type AppConfig } from '../config.js';
 import { createLogger, type Logger } from '../logger.js';
 import { cacheKey, createLruCache, type LruCache } from './cache.js';
 import { fallbackIdeas } from './fallback.js';
-import { AiCallError, completeJson, type JsonCompletion } from './groqClient.js';
+import {
+  AiCallError,
+  completeJson,
+  type JsonCompletion,
+  type JsonCompletionRequest,
+} from './groqClient.js';
 import { parseIdeas } from './parse.js';
 import { parsePatch } from './parsePatch.js';
 import { buildIdeasPrompt, buildRefinePrompt, type PromptPair } from './prompts.js';
 import { parseRefinement } from './refineParser.js';
 
+/** Re-exported so ports.ts can offer the deterministic ideas directly (contracts §3). */
 export { fallbackIdeas } from './fallback.js';
 
+/** Port status reported by /api/health. */
 export const IMPLEMENTATION: PortStatus = 'real';
 
+/** Options shared by every AI call. */
 export interface AiOptions {
   signal?: AbortSignal;
 }
 
+/** Options for generateIdeas. */
 export interface IdeasOptions extends AiOptions {
   /** What the ideas should lean towards (from a refine patch); treated as user data. */
   ideaFocus?: string;
 }
 
+/** Ideas plus whether they came from the AI or the deterministic fallback. */
 export interface IdeasResult {
   ideas: AiIdeas;
   aiStatus: AiStatus;
 }
 
+/** A validated patch, a one-line explanation and where it came from. */
 export interface RefinementResult {
   patch: PlanPatch;
   explanation: string;
   aiStatus: AiStatus;
 }
 
+/** The AI layer as an object, so tests can build one with their own config. */
 export interface AiService {
   generateIdeas(input: EventInput, plan: EnginePlan, options?: IdeasOptions): Promise<IdeasResult>;
   interpretRefinement(
@@ -80,7 +92,7 @@ export function createAiService({
 
   const call = (
     prompt: PromptPair,
-    limits: { maxTokens: number; temperature: number },
+    request: Omit<JsonCompletionRequest, 'system' | 'user'>,
     key: string,
     signal: AbortSignal | undefined,
   ): Promise<JsonCompletion> =>
@@ -91,7 +103,7 @@ export function createAiService({
         fallbackModel: config.groqFallbackModel,
         timeoutMs: config.aiTimeoutMs,
       },
-      { ...prompt, ...limits },
+      { ...prompt, ...request },
       signal,
     );
 
@@ -118,7 +130,12 @@ export function createAiService({
 
       const started = performance.now();
       try {
-        const completion = await call(prompt, IDEAS, apiKey, options.signal);
+        const completion = await call(
+          prompt,
+          { ...IDEAS, isUsable: (content) => parseIdeas(content).ok },
+          apiKey,
+          options.signal,
+        );
         const parsed = parseIdeas(completion.content);
         if (!parsed.ok) return fallback({ reason: `invalid_output:${parsed.failure}` });
         cache.set(key, parsed.ideas);
@@ -150,7 +167,7 @@ export function createAiService({
       try {
         const completion = await call(
           buildRefinePrompt(input, message),
-          REFINE,
+          { ...REFINE, isUsable: (content) => parsePatch(content, input, message).ok },
           apiKey,
           options.signal,
         );

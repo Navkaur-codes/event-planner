@@ -4,6 +4,7 @@
  */
 import Groq from 'groq-sdk';
 
+/** Why a Groq call produced no usable content; short labels that are safe to log. */
 export type AiFailureReason =
   | 'timeout'
   | 'rate_limited'
@@ -12,7 +13,8 @@ export type AiFailureReason =
   | 'rejected'
   | 'aborted'
   | 'empty'
-  | 'truncated';
+  | 'truncated'
+  | 'unusable';
 
 /** A Groq call that did not produce content; `reason` is safe to log. */
 export class AiCallError extends Error {
@@ -25,6 +27,7 @@ export class AiCallError extends Error {
   }
 }
 
+/** Credentials, models and time budget for one completion (from config). */
 export interface GroqSettings {
   apiKey: string;
   model: string;
@@ -33,13 +36,17 @@ export interface GroqSettings {
   timeoutMs: number;
 }
 
+/** Prompts and generation limits for one JSON completion. */
 export interface JsonCompletionRequest {
   system: string;
   user: string;
   maxTokens: number;
   temperature: number;
+  /** When the primary model's answer fails this check, the fallback model gets one try. */
+  isUsable?: (content: string) => boolean;
 }
 
+/** Raw JSON text from the model that answered (validated by the caller). */
 export interface JsonCompletion {
   content: string;
   model: string;
@@ -54,6 +61,7 @@ const RETRYABLE: ReadonlySet<AiFailureReason> = new Set([
   'upstream',
   'model_unavailable',
   'truncated',
+  'unusable',
 ]);
 
 // Reasoning models spend completion tokens on hidden reasoning before the JSON;
@@ -72,7 +80,9 @@ function clientFor(apiKey: string): Groq {
 
 /**
  * Requests a JSON-object completion from the primary model, retrying once on the
- * fallback model after a timeout, 429, 5xx, 404 or a truncated answer.
+ * fallback model after a timeout, 429, 5xx, 404, a truncated answer or one that
+ * fails `request.isUsable`. The fallback model's answer is returned as is, so the
+ * caller's own validation decides (and can log why) if it is still unusable.
  * @throws AiCallError when no attempt returns content.
  */
 export async function completeJson(
@@ -83,6 +93,7 @@ export async function completeJson(
   const primaryBudget = Math.round(settings.timeoutMs * PRIMARY_SHARE);
   try {
     const content = await attempt(settings, settings.model, request, primaryBudget, signal);
+    if (request.isUsable && !request.isUsable(content)) throw new AiCallError('unusable');
     return { content, model: settings.model };
   } catch (error) {
     const canRetry =

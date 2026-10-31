@@ -24,9 +24,32 @@ describe('buildIdeasPrompt', () => {
     expect(system).toMatch(/not instructions/i);
   });
 
-  it('asks for the input language', () => {
-    expect(promptFor({ language: 'hi' }).system).toContain('Hindi');
+  it('asks for the input language, with natural-Hindi guidance for Hindi', () => {
+    const hindi = promptFor({ language: 'hi' }).system;
+    expect(hindi).toContain('Hindi (Devanagari script)');
+    expect(hindi).toMatch(/natural, everyday Hindi/);
+    expect(hindi).toContain('आनंद कारज');
     expect(promptFor({ language: 'en' }).system).toContain('English');
+  });
+
+  it('asks for ideas specific to city, vibe and stated traditions only', () => {
+    const { system } = promptFor();
+    expect(system).toMatch(/regional cuisine, crafts, music/);
+    expect(system).toMatch(/reflect it in the theme names/);
+    expect(system).toMatch(/Anand Karaj/);
+    expect(system).toMatch(/Only use religious or cultural traditions the host mentions/);
+  });
+
+  it('numbers the rules without gaps and adds the focus rule only when refining', () => {
+    const numbers = (system: string) =>
+      [...system.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1]));
+    const plain = promptFor({ constraints: [] }).system;
+    expect(numbers(plain)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(plain).not.toContain('ideaFocus');
+    const input = { ...birthdayInput };
+    const focused = buildIdeasPrompt(input, buildPlan(input, today), 'more games').system;
+    expect(numbers(focused)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(focused).toContain('lean them towards "ideaFocus"');
   });
 
   it('passes user text only as JSON data inside the delimited block', () => {

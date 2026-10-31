@@ -2,6 +2,7 @@ import {
   AiIdeasSchema,
   ConstraintSchema,
   EventTypeSchema,
+  LanguageSchema,
   type Constraint,
   type EventInput,
 } from '@utsav/shared';
@@ -40,20 +41,24 @@ const foodFor = (constraints: Constraint[]) =>
   fallbackIdeas({ ...birthdayInput, vibe: '', constraints }).food.join(' | ');
 
 describe('fallbackIdeas', () => {
-  it('is schema-valid for every event type × constraint combination', () => {
-    for (const eventType of EventTypeSchema.options) {
-      for (const constraints of allConstraintSets()) {
-        const ideas = fallbackIdeas({ ...longest, eventType, constraints });
-        expect(AiIdeasSchema.safeParse(ideas).success).toBe(true);
+  it('is schema-valid for every language × event type × constraint combination', () => {
+    for (const language of LanguageSchema.options) {
+      for (const eventType of EventTypeSchema.options) {
+        for (const constraints of allConstraintSets()) {
+          const ideas = fallbackIdeas({ ...longest, language, eventType, constraints });
+          expect(AiIdeasSchema.safeParse(ideas).success).toBe(true);
+        }
       }
     }
   });
 
-  it('is schema-valid for every event type × vibe', () => {
-    for (const eventType of EventTypeSchema.options) {
-      for (const vibe of VIBES) {
-        const ideas = fallbackIdeas({ ...birthdayInput, eventType, vibe });
-        expect(AiIdeasSchema.safeParse(ideas).success).toBe(true);
+  it('is schema-valid for every language × event type × vibe', () => {
+    for (const language of LanguageSchema.options) {
+      for (const eventType of EventTypeSchema.options) {
+        for (const vibe of VIBES) {
+          const ideas = fallbackIdeas({ ...birthdayInput, language, eventType, vibe });
+          expect(AiIdeasSchema.safeParse(ideas).success).toBe(true);
+        }
       }
     }
   });
@@ -98,6 +103,65 @@ describe('fallbackIdeas', () => {
     expect(ideas.decor.join(' ')).toMatch(/wheelchair/i);
     expect(ideas.food.join(' ')).toMatch(/alcohol-free/i);
     expect(ideas.vendorQuestions.join(' ')).toMatch(/ramps/i);
-    expect(ideas.summary).toMatch(/eco friendly, wheelchair access, alcohol free/);
+    expect(ideas.summary).toMatch(/eco-friendly, wheelchair access, alcohol-free/);
+  });
+});
+
+describe('fallbackIdeas in Hindi', () => {
+  const hindi: EventInput = { ...birthdayInput, language: 'hi' };
+  const devanagari = /[ऀ-ॿ]/;
+  const allText = (input: EventInput) => {
+    const ideas = fallbackIdeas(input);
+    return [
+      ideas.summary,
+      ...ideas.themes.flatMap((t) => [t.name, t.description]),
+      ...ideas.decor,
+      ...ideas.food,
+      ...ideas.activities,
+      ...ideas.vendorQuestions,
+      ...ideas.personalTouches,
+    ];
+  };
+
+  it('writes every idea in Devanagari, keeping the host’s own title and city', () => {
+    const ideas = fallbackIdeas({ ...hindi, constraints: ConstraintSchema.options.slice() });
+    for (const text of allText({ ...hindi, constraints: ConstraintSchema.options.slice() })) {
+      expect(text).toMatch(devanagari);
+    }
+    expect(ideas.summary).toContain(birthdayInput.title);
+    expect(ideas.summary).toContain(birthdayInput.city);
+    expect(ideas.summary).toContain('शाकाहारी');
+  });
+
+  it('matches Hindi vibe keywords', () => {
+    expect(fallbackIdeas({ ...hindi, vibe: 'शाही राजस्थानी' }).themes[0]?.name).toBe(
+      'रजवाड़ा रातें',
+    );
+    expect(fallbackIdeas({ ...hindi, vibe: 'अंतरिक्ष यात्री' }).themes[0]?.name).toBe('मिशन मंगल');
+  });
+
+  it('mirrors the English structure item for item', () => {
+    for (const eventType of EventTypeSchema.options) {
+      for (const constraints of [[], ['jain', 'eco_friendly', 'kid_friendly']] as Constraint[][]) {
+        const english = fallbackIdeas({ ...birthdayInput, eventType, constraints });
+        const hindiIdeas = fallbackIdeas({ ...hindi, eventType, constraints });
+        for (const key of ['decor', 'food', 'activities', 'vendorQuestions'] as const) {
+          expect(hindiIdeas[key]).toHaveLength(english[key].length);
+        }
+      }
+    }
+  });
+
+  it('respects diets and eco rules in Hindi too', () => {
+    const food = (constraints: Constraint[]) =>
+      fallbackIdeas({ ...hindi, vibe: '', constraints }).food.join(' | ');
+    const meat = /चिकन|मटन|मछली|अंडा|अंडे(?! और शहद से मुक्त)/;
+    expect(food(['vegetarian'])).not.toMatch(meat);
+    expect(food(['vegan'])).not.toMatch(/पनीर|घी|दही|कुल्फ़ी|मक्खन|शहद/);
+    const jainSafe = food(['jain']).replace(/बिना प्याज़-लहसुन/g, '');
+    expect(jainSafe).not.toMatch(/प्याज़|लहसुन|आलू|गाजर/);
+    expect(food(['halal'])).toMatch(/हलाल/);
+    const decor = fallbackIdeas({ ...hindi, vibe: 'अंतरिक्ष', constraints: ['eco_friendly'] });
+    expect(decor.decor.join(' ')).not.toMatch(/गुब्बार/);
   });
 });

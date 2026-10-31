@@ -10,6 +10,7 @@ import PlanDashboard from './PlanDashboard';
 vi.mock('../../motion', () => ({
   revealPlan: vi.fn(() => () => undefined),
   celebrate: vi.fn(() => () => undefined),
+  countUp: vi.fn(() => () => undefined),
 }));
 
 function renderDashboard(response = planResponse, celebrated = false, actuals: Actuals = {}) {

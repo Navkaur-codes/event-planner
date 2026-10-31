@@ -68,6 +68,16 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Utsav' })).toBeTruthy();
     const cards = screen.getByRole('list', { name: 'Events Utsav can plan' });
     expect(within(cards).getAllByRole('heading', { level: 2 })).toHaveLength(3);
+    const how = screen.getByRole('region', { name: 'How it works' });
+    expect(
+      within(how)
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => h.textContent),
+    ).toEqual([
+      'The engine does the maths',
+      'The AI adds the personal touch',
+      'Your plan stays with you',
+    ]);
     expect(await screen.findByText(/Planner ready · v0\.1\.0 · AI ideas on/)).toBeTruthy();
   });
 

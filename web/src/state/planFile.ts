@@ -1,3 +1,4 @@
+import { downloadText, slugify } from '../lib/download';
 import { parseSavedPlan, type SavedPlan } from './storage';
 
 /** A real plan file is a few kB; anything far bigger is not one. */
@@ -23,23 +24,14 @@ export async function readPlanFile(file: File): Promise<PlanFileResult> {
 
 /** A safe download name from the event title, e.g. "utsav-aarav-turns-7.json". */
 export function planFileName(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-  return `utsav-${slug || 'plan'}.json`;
+  return `utsav-${slugify(title, 'plan')}.json`;
 }
 
 /** Downloads the plan as a JSON file the person can import later. */
 export function downloadPlanFile(saved: SavedPlan): void {
-  const blob = new Blob([JSON.stringify(saved, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = planFileName(saved.response.plan.input.title);
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  downloadText(
+    JSON.stringify(saved, null, 2),
+    planFileName(saved.response.plan.input.title),
+    'application/json',
+  );
 }

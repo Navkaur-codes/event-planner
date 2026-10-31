@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { revealPlan, stepTransition } from './index';
+import { countUp, revealPlan, stepTransition } from './index';
 
 /** Fakes `prefers-reduced-motion` for gsap.matchMedia. */
 function preferReducedMotion(reduced: boolean): void {
@@ -49,5 +49,20 @@ describe('motion', () => {
     stepTransition(step, 1)();
     expect(step.style.opacity).toBe('');
     cleanup();
+  });
+
+  it('counts the what-if total up, and just shows it with reduced motion', () => {
+    const format = (value: number) => `₹${value}`;
+    const element = document.createElement('span');
+
+    preferReducedMotion(true);
+    countUp(element, 100, 500, format)();
+    expect(element.textContent).toBe('₹500');
+
+    preferReducedMotion(false);
+    const cleanup = countUp(element, 500, 900, format);
+    expect(element.textContent).not.toBe('');
+    cleanup();
+    expect(element.textContent).toBe('₹900');
   });
 });

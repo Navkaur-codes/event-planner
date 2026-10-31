@@ -1,7 +1,7 @@
 /**
- * GenAI layer — STEP 0 STUB.
- * Session B replaces this with the Groq-backed implementation, keeping the exact
- * export names and signatures from docs/contracts.md §3, and flips IMPLEMENTATION.
+ * GenAI layer: personalized ideas from Groq, validated and cached, with a
+ * deterministic fallback so a plan never depends on the AI being up.
+ * Public API matches docs/contracts.md §3.
  */
 import type {
   AiIdeas,
@@ -11,38 +11,127 @@ import type {
   PlanPatch,
   PortStatus,
 } from '@utsav/shared';
+import { isAiConfigured, loadConfig, type AppConfig } from '../config.js';
+import { createLogger, type Logger } from '../logger.js';
+import { cacheKey, createLruCache, type LruCache } from './cache.js';
+import { fallbackIdeas } from './fallback.js';
+import { AiCallError, completeJson } from './groqClient.js';
+import { parseIdeas } from './parse.js';
+import { buildIdeasPrompt } from './prompts.js';
 
-export const IMPLEMENTATION: PortStatus = 'stub';
+export { fallbackIdeas } from './fallback.js';
 
-interface AiOptions {
+export const IMPLEMENTATION: PortStatus = 'real';
+
+export interface AiOptions {
   signal?: AbortSignal;
 }
 
-/** Deterministic ideas used whenever the AI is unavailable. */
-export function fallbackIdeas(input: EventInput): AiIdeas {
+export interface IdeasResult {
+  ideas: AiIdeas;
+  aiStatus: AiStatus;
+}
+
+export interface AiService {
+  generateIdeas(input: EventInput, plan: EnginePlan, options?: AiOptions): Promise<IdeasResult>;
+}
+
+interface AiDependencies {
+  config: AppConfig;
+  logger: Logger;
+  cache?: LruCache<AiIdeas>;
+}
+
+const IDEAS_MAX_TOKENS = 1_200;
+const IDEAS_TEMPERATURE = 0.7;
+const CACHE_LIMITS = { maxEntries: 200, ttlMs: 60 * 60 * 1_000 } as const;
+
+/**
+ * Creates the AI service with explicit dependencies (used directly by tests).
+ * Logs only status, model, latency and failure reason — never prompts or keys.
+ */
+export function createAiService({
+  config,
+  logger,
+  cache = createLruCache<AiIdeas>(CACHE_LIMITS),
+}: AiDependencies): AiService {
   return {
-    summary: `A joyful ${input.eventType} for ${input.guestCount} guests in ${input.city}.`,
-    themes: [
-      { name: 'Classic celebration', description: 'Warm colours, fresh flowers and good music.' },
-    ],
-    decor: ['Marigold garlands and fairy lights'],
-    food: ['A seasonal menu that suits every guest'],
-    activities: ['A short welcome toast and a group photo'],
-    vendorQuestions: ['What is included in the quoted price?'],
-    personalTouches: ['A handwritten welcome board'],
+    async generateIdeas(input, plan, options = {}) {
+      const fallback = (reason: string, status?: number): IdeasResult => {
+        logger.warn('ai.ideas', { aiStatus: 'fallback', reason, status });
+        return { ideas: fallbackIdeas(input), aiStatus: 'fallback' };
+      };
+      if (!isAiConfigured(config) || !config.groqApiKey) return fallback('not_configured');
+
+      const prompt = buildIdeasPrompt(input, plan);
+      const key = cacheKey(config.groqModel, prompt.system, prompt.user);
+      const cached = cache.get(key);
+      if (cached) {
+        logger.info('ai.ideas', { aiStatus: 'ai', cacheHit: true });
+        return { ideas: cached, aiStatus: 'ai' };
+      }
+
+      const started = performance.now();
+      try {
+        const completion = await completeJson(
+          {
+            apiKey: config.groqApiKey,
+            model: config.groqModel,
+            fallbackModel: config.groqFallbackModel,
+            timeoutMs: config.aiTimeoutMs,
+          },
+          { ...prompt, maxTokens: IDEAS_MAX_TOKENS, temperature: IDEAS_TEMPERATURE },
+          options.signal,
+        );
+        const latencyMs = Math.round(performance.now() - started);
+        const ideas = parseIdeas(completion.content);
+        if (!ideas) return fallback('invalid_output');
+        cache.set(key, ideas);
+        logger.info('ai.ideas', {
+          aiStatus: 'ai',
+          cacheHit: false,
+          model: completion.model,
+          latencyMs,
+        });
+        return { ideas, aiStatus: 'ai' };
+      } catch (error) {
+        if (error instanceof AiCallError) return fallback(error.reason, error.status);
+        return fallback('unexpected');
+      }
+    },
   };
 }
 
-/** Generates personalized ideas for a plan. Stub: always returns the fallback. */
-export async function generateIdeas(
-  input: EventInput,
-  _plan: EnginePlan,
-  _options: AiOptions = {},
-): Promise<{ ideas: AiIdeas; aiStatus: AiStatus }> {
-  return { ideas: fallbackIdeas(input), aiStatus: 'fallback' };
+let defaultService: AiService | undefined;
+
+// Built on first use, after index.ts has loaded .env.
+function service(): AiService {
+  if (!defaultService) {
+    const config = loadConfig();
+    defaultService = createAiService({
+      config,
+      logger: createLogger({
+        level: config.env === 'test' ? 'error' : 'info',
+        secrets: config.groqApiKey ? [config.groqApiKey] : [],
+      }),
+    });
+  }
+  return defaultService;
 }
 
-/** Turns a free-text request into a structured patch. Stub: only records the focus. */
+/** Generates personalized ideas for a plan; never throws — falls back instead. */
+export function generateIdeas(
+  input: EventInput,
+  plan: EnginePlan,
+  options: AiOptions = {},
+): Promise<IdeasResult> {
+  return service().generateIdeas(input, plan, options);
+}
+
+/**
+ * Turns a free-text request into a structured patch.
+ * Phase 1 placeholder: records the message as the idea focus; the AI version lands in Phase 2.
+ */
 export async function interpretRefinement(
   _input: EventInput,
   message: string,

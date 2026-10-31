@@ -1,0 +1,149 @@
+import { AiIdeasSchema, buildPlan } from '@utsav/shared';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAiService } from '../../src/ai/index.js';
+import { createLogger } from '../../src/logger.js';
+import {
+  aiIdeas,
+  birthdayInput,
+  completion,
+  hangUntilAborted,
+  httpError,
+  testConfig,
+} from '../fixtures.js';
+
+const create = vi.hoisted(() => vi.fn());
+vi.mock('groq-sdk', () => ({
+  default: class {
+    chat = { completions: { create } };
+  },
+}));
+
+const plan = buildPlan(birthdayInput, new Date('2026-10-31T00:00:00Z'));
+
+function makeService(config = testConfig()) {
+  const lines: string[] = [];
+  const logger = createLogger({ level: 'debug', write: (line) => lines.push(line) });
+  return { service: createAiService({ config, logger }), lines };
+}
+
+beforeEach(() => {
+  create.mockReset();
+});
+
+describe('generateIdeas', () => {
+  it('returns validated AI ideas with aiStatus "ai"', async () => {
+    create.mockResolvedValue(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result).toEqual({ ideas: aiIdeas, aiStatus: 'ai' });
+    const [body] = create.mock.calls[0] ?? [];
+    expect(body).toMatchObject({
+      model: 'llama-3.3-70b-versatile',
+      response_format: { type: 'json_object' },
+      max_tokens: 1_200,
+    });
+  });
+
+  it.each([
+    ['invalid JSON', () => create.mockResolvedValue(completion('{"summary": oops'))],
+    ['schema-invalid JSON', () => create.mockResolvedValue(completion('{"summary": "hi"}'))],
+    ['empty content', () => create.mockResolvedValue(completion(''))],
+    ['a timeout on both models', () => create.mockImplementation(hangUntilAborted)],
+    ['429 on both models', () => create.mockRejectedValue(httpError(429))],
+    ['401 bad key', () => create.mockRejectedValue(httpError(401))],
+    ['a network error', () => create.mockRejectedValue(new TypeError('fetch failed'))],
+  ])('falls back on %s', async (_case, arrange) => {
+    arrange();
+    const { service } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result.aiStatus).toBe('fallback');
+    expect(AiIdeasSchema.safeParse(result.ideas).success).toBe(true);
+  });
+
+  it('falls back without any network call when no key is configured', async () => {
+    const { service } = makeService(testConfig({ groqApiKey: undefined }));
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result.aiStatus).toBe('fallback');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('retries once on the fallback model after a 429', async () => {
+    create
+      .mockRejectedValueOnce(httpError(429))
+      .mockResolvedValueOnce(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result.aiStatus).toBe('ai');
+    expect(create.mock.calls.map(([body]) => (body as { model: string }).model)).toEqual([
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+    ]);
+  });
+
+  it('retries on the fallback model after a primary timeout, within the total budget', async () => {
+    create
+      .mockImplementationOnce(hangUntilAborted)
+      .mockResolvedValueOnce(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    const started = Date.now();
+    const result = await service.generateIdeas(birthdayInput, plan);
+    expect(result.aiStatus).toBe('ai');
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it('retries on the fallback model when the primary model is retired (404)', async () => {
+    create
+      .mockRejectedValueOnce(httpError(404))
+      .mockResolvedValueOnce(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    expect((await service.generateIdeas(birthdayInput, plan)).aiStatus).toBe('ai');
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry on other 4xx errors', async () => {
+    create.mockRejectedValue(httpError(400));
+    const { service } = makeService();
+    await service.generateIdeas(birthdayInput, plan);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops when the caller aborts', async () => {
+    create.mockImplementation(hangUntilAborted);
+    const { service } = makeService(testConfig({ aiTimeoutMs: 10_000 }));
+    const controller = new AbortController();
+    const pending = service.generateIdeas(birthdayInput, plan, { signal: controller.signal });
+    controller.abort();
+    expect((await pending).aiStatus).toBe('fallback');
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves the same input from cache (Groq called once)', async () => {
+    create.mockResolvedValue(completion(JSON.stringify(aiIdeas)));
+    const { service, lines } = makeService();
+    const first = await service.generateIdeas(birthdayInput, plan);
+    const second = await service.generateIdeas(birthdayInput, plan);
+    expect(second).toEqual(first);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(lines.some((line) => line.includes('"cacheHit":true'))).toBe(true);
+  });
+
+  it('does not cache fallbacks, so the next request tries the AI again', async () => {
+    create.mockRejectedValueOnce(httpError(500)).mockRejectedValueOnce(httpError(500));
+    create.mockResolvedValue(completion(JSON.stringify(aiIdeas)));
+    const { service } = makeService();
+    expect((await service.generateIdeas(birthdayInput, plan)).aiStatus).toBe('fallback');
+    expect((await service.generateIdeas(birthdayInput, plan)).aiStatus).toBe('ai');
+  });
+
+  it('never logs the key, prompts or user text', async () => {
+    create.mockResolvedValue(completion(JSON.stringify(aiIdeas)));
+    const { service, lines } = makeService();
+    await service.generateIdeas(birthdayInput, plan);
+    create.mockRejectedValue(httpError(429));
+    await service.generateIdeas({ ...birthdayInput, title: 'Another party' }, plan);
+    const log = lines.join('\n');
+    expect(log).not.toContain('gsk_');
+    expect(log).not.toContain(birthdayInput.notes);
+    expect(log).not.toContain('Another party');
+  });
+});

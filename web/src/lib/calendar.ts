@@ -1,15 +1,11 @@
-import type { Timeline } from '@utsav/shared';
+import { timelineToIcs, type Timeline } from '@utsav/shared';
 import { downloadText, slugify } from './download';
 
 /** Turns a timeline into an iCalendar (.ics) document. */
 export type IcsBuilder = (timeline: Timeline, title: string) => string;
 
-/**
- * The engine's `timelineToIcs` (CCR-01, Session A) is re-exported from `@utsav/shared` only at
- * the GATE-3 merge. Until then this stays null and the calendar button is not shown; wiring it is
- * one line: `export const icsBuilder: IcsBuilder | null = timelineToIcs;`.
- */
-export const icsBuilder: IcsBuilder | null = null;
+/** The engine's RFC 5545 builder; `null` would hide the calendar button. */
+export const icsBuilder: IcsBuilder | null = timelineToIcs;
 
 /** A download name such as "utsav-aarav-turns-7.ics". */
 export function icsFileName(title: string): string {

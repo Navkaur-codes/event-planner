@@ -4,5 +4,6 @@ export {
   applyPatch,
   buildPlan,
   recalculateBudget,
+  timelineToIcs,
   IMPLEMENTATION as ENGINE_IMPLEMENTATION,
 } from './engine/index.js';

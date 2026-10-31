@@ -94,7 +94,7 @@ Raise it yourself after the feature freeze, for edits outside your paths, and fo
 - **Tokens** (CSS custom properties in `web/src/styles/tokens.css`):
   `--paper #FFF6E9` · `--ink #2B1B3D` · `--marigold #FFB627` · `--rani #E5446D` (wedding) · `--mint #3DCCC7` (birthday) · `--peacock #1B6F8C` (community) · `--sindoor #F25C2A` (warnings) · `--lilac-tint #EADCF8`.
   `--accent` switches with the event type and re-themes the UI. Dark ink on bright fills; never white text on marigold/mint. Every pair WCAG AA.
-- **Type:** Fraunces (display) + Nunito (body), Google Fonts, 2 weights each, `font-display: swap`.
+- **Type:** Fraunces (display) + Nunito (body), self-hosted via `@fontsource` (latin subset, 2 weights each), `font-display: swap`.
 - **Signature elements:** confetti-paper texture, scalloped bunting section edges, sticker-style cards with a slight tilt, hand-drawn underline accents.
 - **Motion (GSAP, only where it carries meaning):** wizard step transitions · plan reveal (bars grow, timeline staggers) · confetti on first plan and checklist 100% · budget count-up on what-if change. Always inside `gsap.matchMedia()` with a reduced-motion branch; never blocks input; lazy-loaded with the dashboard.
 - **Banned:** default Tailwind/Bootstrap palettes, purple-blue "AI" gradients, glassmorphism, grey corporate dashboards, emoji spam, chatbot-only UI, animation on every element, pie/donut/3D charts, colour-only status.

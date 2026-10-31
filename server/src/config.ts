@@ -48,8 +48,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     env: values.NODE_ENV ?? 'development',
     port: values.PORT ?? 3000,
     groqApiKey: values.GROQ_API_KEY,
-    groqModel: values.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
-    groqFallbackModel: values.GROQ_FALLBACK_MODEL ?? 'llama-3.1-8b-instant',
+    groqModel: values.GROQ_MODEL ?? 'openai/gpt-oss-120b',
+    groqFallbackModel: values.GROQ_FALLBACK_MODEL ?? 'openai/gpt-oss-20b',
     aiTimeoutMs: values.AI_TIMEOUT_MS ?? 15_000,
     rateLimitPerMin: values.RATE_LIMIT_PER_MIN ?? 20,
   };

@@ -19,7 +19,7 @@ Utsav splits the work between two layers so each does what it is best at:
 | Layer | Responsibility | Why |
 |---|---|---|
 | **Planning engine** (deterministic TypeScript) | Budget allocation, timeline, vendor checklist, warnings | Money and dates must always add up — the engine is pure, tested and instant |
-| **GenAI layer** (Groq, Llama 3.3 70B) | Personalized theme concepts, decor/food/activity ideas, vendor questions, natural-language refinements | Creativity and understanding free-text requests |
+| **GenAI layer** (Groq, GPT-OSS 120B) | Personalized theme concepts, decor/food/activity ideas, vendor questions, natural-language refinements | Creativity and understanding free-text requests |
 
 **Decisions based on user context**
 - **Budget** is split by event type, then weighted toward the user's top-3 priorities, with a fixed 10% contingency. Amounts are rounded so lines always sum exactly to the total.
@@ -49,7 +49,7 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 ## GenAI usage
 | Service | Model | Where it is used |
 |---|---|---|
-| Groq API (free tier) | `llama-3.3-70b-versatile` (primary), `llama-3.1-8b-instant` (fallback) | Generating personalized ideas for each plan; interpreting refinement requests into structured plan changes |
+| Groq API (free tier) | `openai/gpt-oss-120b` (primary), `openai/gpt-oss-20b` (fallback) | Generating personalized ideas for each plan; interpreting refinement requests into structured plan changes |
 
 ## Security
 - The Groq API key lives only in server environment variables (local `.env`, Render dashboard); it is never sent to the browser, logged or committed.

@@ -5,7 +5,7 @@ describe('loadConfig', () => {
   it('applies defaults and treats empty values as unset', () => {
     const config = loadConfig({ GROQ_API_KEY: '', PORT: '' });
     expect(config.port).toBe(3000);
-    expect(config.groqModel).toBe('llama-3.3-70b-versatile');
+    expect(config.groqModel).toBe('openai/gpt-oss-120b');
     expect(isAiConfigured(config)).toBe(false);
   });
 

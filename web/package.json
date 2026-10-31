@@ -1,6 +1,6 @@
 {
   "name": "@utsav/web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Utsav web app: wizard, plan dashboard, refine, tracking and export.",
   "type": "module",
@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@utsav/shared": "0.2.0",
+    "@utsav/shared": "0.3.0",
     "gsap": "^3.15.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

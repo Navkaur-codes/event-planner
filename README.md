@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v0.2 — the full core flow is live: 4-step wizard → plan with an exact budget, a backwards timeline, a constraint-aware vendor checklist, warnings and personalized AI ideas (English or Hindi), saved in your browser. Next (v0.3): plain-language refine ("cut the budget by 20%"), spend tracking and export. This README is updated at every milestone.
+> **Status:** ✅ v0.3 — plan, refine and track are live: 4-step wizard → exact budget, backwards timeline, constraint-aware vendor checklist and personalized AI ideas (English or Hindi); refine in plain language ("cut the budget by 20%", "move it outdoors"); track actual spend; export, import and print your plan. Next (v1.0): what-if sliders, calendar export and polish. This README is updated at every milestone.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com · **Demo video:** _coming soon_
 
 ---
@@ -37,7 +37,9 @@ Utsav splits the work between two layers so each does what it is best at:
    - **Timeline** counted back from the big day, compressed (with a warning) if the date is close.
    - **Vendor checklist** that changes with your needs (e.g. Jain/halal caterer checks, wheelchair access, permits for large crowds).
    - **Ideas for you** — themes, decor, food, activities, personal touches and questions to ask vendors, written by the AI for your city, vibe and traditions.
-4. Close the tab and come back — your plan is still there.
+4. **Refine it in plain words** — type or tap a suggestion: "Cut budget 20%", "Make it eco-friendly", "Add 20 guests", "Move it outdoors". The AI turns your words into a structured change; the engine recalculates everything and highlights what changed.
+5. **Track and share** — enter what you actually spent per category (over-budget lines are flagged), tick off checklist items (confetti at 100%), export the plan as a file, import it on another device, or print a clean one-page copy.
+6. Close the tab and come back — your plan is still there.
 
 ## How it works
 ```
@@ -66,6 +68,9 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - All inputs and AI outputs are validated with strict schemas; user text is length-limited and treated as data in prompts.
 - Helmet security headers and CSP, rate limiting, small request-body limits, generic error messages.
 - CI secret scan fails the build if a key-like value is ever committed.
+- Refine requests become a strict, schema-validated patch; injection attempts ("ignore previous instructions…") are refused, and this is tested.
+- Plans use the visitor's local date, accepted only within one day of server time, so nobody can plan "in the past".
+- Imported plan files are schema-validated; a tampered file is rejected without changing anything.
 
 ## Accessibility
 Semantic HTML, labelled form controls, full keyboard support, visible focus, `aria-live` status updates, charts with table alternatives, WCAG AA colour contrast, and all animation disabled for users who prefer reduced motion.

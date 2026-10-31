@@ -1,6 +1,6 @@
 {
   "name": "utsav-event-planner",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "GenAI-powered planner for weddings, birthdays and community events: budgets, timelines, vendor checklists and personalized ideas.",
   "type": "module",

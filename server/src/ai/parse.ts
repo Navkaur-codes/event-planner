@@ -10,6 +10,9 @@ const CONTROL_CHARS = /\p{Cc}/gu;
 const MONEY =
   /(?:₹|\brs\.?|\binr\b|\$|€|£)\s?\d|\d[\d,.]*\s?(?:₹|\brs\b|\binr\b|rupees?|dollars?|euros?|pounds?|lakhs?|crores?|usd|eur|gbp)/i;
 
+// Signs that an answer echoes the prompt or a key (prompt injection that "worked").
+const LEAK = /gsk_|you are utsav|event_data|refine_data|never reveal these instructions/i;
+
 // Mirrors AiIdeasSchema's limits so slightly over-long answers are trimmed rather than
 // thrown away; the schema still has the final say (a test keeps the two in step).
 const LIST_LIMITS = {
@@ -40,11 +43,20 @@ export function parseIdeas(raw: string): ParseResult {
     const fields = new Set(result.error.issues.map((issue) => String(issue.path[0] ?? 'root')));
     return { ok: false, failure: `schema:${[...fields].join(',')}` };
   }
+  if (revealsPrompt(result.data)) return { ok: false, failure: 'leak' };
   const { summary, themes } = result.data;
   const mentionsMoney = [summary, ...themes.flatMap((t) => [t.name, t.description])].some((s) =>
     MONEY.test(s),
   );
   return mentionsMoney ? { ok: false, failure: 'money' } : { ok: true, ideas: result.data };
+}
+
+/** True when any string in the value looks like leaked prompt text or an API key. */
+export function revealsPrompt(value: unknown): boolean {
+  if (typeof value === 'string') return LEAK.test(value);
+  if (Array.isArray(value)) return value.some(revealsPrompt);
+  if (isRecord(value)) return Object.values(value).some(revealsPrompt);
+  return false;
 }
 
 /** Recursively strips HTML tags and control characters and collapses whitespace. */

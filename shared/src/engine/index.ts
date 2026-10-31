@@ -13,7 +13,9 @@ import { buildTimeline } from './timeline.js';
 import { evaluateWarnings } from './warnings.js';
 
 export { applyPatch } from './patch.js';
+export { timelineToIcs } from './ics.js';
 
+/** Port status reported by `/api/health`: this engine is the real implementation. */
 export const IMPLEMENTATION: PortStatus = 'real';
 
 /** Builds the full plan — budget, timeline, vendor checklist and warnings — for an event. */

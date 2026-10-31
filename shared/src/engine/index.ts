@@ -34,8 +34,9 @@ export function buildPlan(input: EventInput, today: Date): EnginePlan {
 }
 
 /**
- * Recomputes only the budget for what-if sliders. Overrides are rounded and clamped to the
- * input limits so a slider can never produce an invalid plan.
+ * Recomputes only the budget for what-if sliders — the fast path: no timeline, checklist or
+ * warnings work. Overrides are rounded and clamped to the input limits so a slider can never
+ * produce an invalid plan.
  */
 export function recalculateBudget(
   input: EventInput,

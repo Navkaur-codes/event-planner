@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventInputSchema } from '../src/contracts.js';
+import { EventInputSchema, LIMITS, type EventInput, type PlanPatch } from '../src/contracts.js';
 import { applyPatch } from '../src/engine/index.js';
 import { makeInput } from './fixtures.js';
 
@@ -60,4 +60,81 @@ describe('applyPatch', () => {
     expect(EventInputSchema.safeParse(patched).success).toBe(true);
     expect(applyPatch(input, {})).toEqual(input);
   });
+});
+
+describe('applyPatch field matrix', () => {
+  const base = makeInput({ constraints: ['indoor', 'vegetarian'] });
+
+  // One patch per PlanPatch field, with the input fields it is allowed to change.
+  const single: [string, PlanPatch, Partial<EventInput>][] = [
+    ['budget', { budget: 80_000 }, { budget: 80_000 }],
+    ['budgetChangePercent', { budgetChangePercent: 15 }, { budget: 69_000 }],
+    ['guestCount', { guestCount: 75 }, { guestCount: 75 }],
+    ['eventDate', { eventDate: '2027-02-14' }, { eventDate: '2027-02-14' }],
+    [
+      'addConstraints',
+      { addConstraints: ['halal'] },
+      { constraints: ['indoor', 'vegetarian', 'halal'] },
+    ],
+    ['removeConstraints', { removeConstraints: ['indoor'] }, { constraints: ['vegetarian'] }],
+    ['priorities', { priorities: ['gifts', 'venue'] }, { priorities: ['gifts', 'venue'] }],
+    ['vibe', { vibe: ' boho garden ' }, { vibe: 'boho garden' }],
+    ['ideaFocus', { ideaFocus: 'more eco-friendly decor' }, {}],
+  ];
+
+  it.each(single)('%s alone changes only its own field', (_field, patch, changed) => {
+    const patched = applyPatch(base, patch);
+    expect(patched).toEqual({ ...base, ...changed });
+    expect(EventInputSchema.safeParse(patched).success).toBe(true);
+  });
+
+  it('applies every field at once', () => {
+    const patched = applyPatch(base, {
+      budget: 120_000,
+      budgetChangePercent: -50,
+      guestCount: 10,
+      eventDate: '2027-03-01',
+      addConstraints: ['outdoor', 'eco_friendly'],
+      removeConstraints: ['vegetarian'],
+      priorities: ['decor'],
+      vibe: '  sunset picnic ',
+      ideaFocus: 'zero waste',
+    });
+    expect(patched).toEqual({
+      ...base,
+      budget: 120_000,
+      guestCount: 10,
+      eventDate: '2027-03-01',
+      constraints: ['outdoor', 'eco_friendly'],
+      priorities: ['decor'],
+      vibe: 'sunset picnic',
+    });
+    expect(EventInputSchema.safeParse(patched).success).toBe(true);
+  });
+
+  it('adding indoor removes outdoor', () => {
+    const outdoor = makeInput({ constraints: ['outdoor'] });
+    expect(applyPatch(outdoor, { addConstraints: ['indoor'] }).constraints).toEqual(['indoor']);
+  });
+
+  it('dedupes and caps replaced priorities defensively', () => {
+    const patch = { priorities: ['food', 'food', 'venue', 'decor', 'gifts'] } as PlanPatch;
+    expect(applyPatch(base, patch).priorities).toEqual(['food', 'venue', 'decor']);
+  });
+
+  it.each([-90, -33.3, -20, -0.5, 0, 0.5, 12.5, 99.9, 200])(
+    'budgetChangePercent %s% stays an integer within limits for any budget',
+    (percent) => {
+      for (const budget of [LIMITS.budget.min, 1_234, 60_000, 7_777_777, LIMITS.budget.max]) {
+        const patched = applyPatch(makeInput({ budget }), { budgetChangePercent: percent });
+        expect(patched.budget).toBe(
+          Math.min(
+            LIMITS.budget.max,
+            Math.max(LIMITS.budget.min, Math.round(budget + (budget * percent) / 100)),
+          ),
+        );
+        expect(EventInputSchema.safeParse(patched).success).toBe(true);
+      }
+    },
+  );
 });

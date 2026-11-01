@@ -13,6 +13,13 @@ A GenAI-powered planning assistant that helps people organize **weddings, birthd
 ## The problem
 Planning an event means juggling money, dates, vendors and ideas at once. Generic AI chat gives inspiring text but unreliable numbers; spreadsheets give numbers but no ideas. Organizers need a plan that is **correct**, **personal**, and **easy to adjust**.
 
+## Who it is for
+- **Families planning a wedding** — many ceremonies, hundreds of guests, a large budget and traditions to respect.
+- **Parents planning a child's birthday** — a small budget, a theme, kid-friendly food and activities, little time.
+- **Volunteers running a community event** — festivals, fundraisers and meet-ups with crowds, permits, logistics and accessibility needs.
+
+Most of them are not professional planners, often plan in India (INR by default, Indian city tiers and traditions), and may prefer Hindi for ideas.
+
 ## Approach and logic
 Utsav splits the work between two layers so each does what it is best at:
 
@@ -28,6 +35,24 @@ Utsav splits the work between two layers so each does what it is best at:
 - **Warnings** flag unrealistic budgets per guest for the event type and city tier, very short lead times and conflicting choices.
 - **AI ideas** must respect every dietary and accessibility constraint and are validated against a strict schema. The AI **never** sets prices or dates.
 - **Refine** ("cut the budget by 20%", "make it eco-friendly") — the AI turns the request into a structured, validated change; the engine recomputes the plan.
+
+### How it addresses the challenge
+| Challenge asks for | Utsav feature | Where in the code |
+|---|---|---|
+| Weddings, birthdays **and** community events | Each type has its own budget split, milestone template, vendor rules and theme | `shared/src/engine/rules/*` |
+| **Budgets** | Priority-weighted split, 10% contingency, exact rounding, per-guest cost, what-if sliders, actual-vs-planned tracker | `engine/budget.ts`, `web/src/features/plan/{BudgetPanel,WhatIfPanel}.tsx`, `web/src/features/track/SpendTracker.tsx` |
+| **Timelines** | Milestones counted back from the event date, compressed with a warning when it is close; calendar (.ics) export | `engine/timeline.ts`, `engine/ics.ts` |
+| **Vendor checklists** | Vendors and tasks chosen by type, size and needs (Jain/halal/vegan caterer checks, wheelchair access, permits, rentals) | `engine/checklist.ts`, `rules/vendors.ts` |
+| **Personalized ideas** | GenAI themes, decor, food, activities, personal touches and vendor questions for the city, vibe and traditions, in English or Hindi | `server/src/ai/*` |
+| **Logical decisions from user context** | Rules as data; warnings for low per-guest budget, short notice, large crowds, conflicting choices | `engine/warnings.ts`, `rules/thresholds.ts` |
+| **Dynamic assistant** | Plain-language refine ("cut the budget by 20%", "move it outdoors") → validated change → whole plan recalculated | `POST /api/refine`, `ai/refineParser.ts`, `engine/patch.ts` |
+| **Real-world usability** | Saved in the browser, export/import, print, calendar, works when the AI is down, accessible, phone-friendly | `web/src/state/*`, `web/src/features/track/*` |
+
+### Deliberate boundaries
+- The AI **never** sets a price, a budget line or a date. Numbers and dates come only from the engine (or from numbers the host typed in a refine request).
+- Utsav suggests vendor **types** and questions to ask — never named businesses or quotes it cannot verify.
+- No accounts and no server database: plans stay on the visitor's device.
+- Budget splits and per-guest thresholds are planning defaults, not market prices.
 
 ## Try it in 2 minutes
 1. Open the live demo and pick **Weddings**, **Birthdays** or **Community events**.
@@ -68,6 +93,17 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - Guardrails: the engine owns every number and date; JSON mode + strict Zod validation; truncation detection and model fallback; prompt-injection handling; in-memory cache; per-IP rate limits; a deterministic fallback so the app always works.
 - Details: [`server/src/ai/README.md`](server/src/ai/README.md).
 
+## API
+All endpoints are same-origin JSON, validated with the shared Zod contracts (`shared/src/contracts.ts`); unknown fields are rejected.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| `GET` | `/api/health` | — | `{ status, version, ports: { engine, ai }, aiConfigured }` |
+| `POST` | `/api/plan` | `PlanRequest` — event details + optional `clientToday` | `PlanResponse` — `{ plan, ideas, aiStatus }` |
+| `POST` | `/api/refine` | `{ input, message, clientToday? }` | `RefineResponse` — `{ patch, explanation, result }` |
+
+Errors use one shape: `{ error: { code, message, issues? } }` with `400` (validation), `404`, `413` (body > 10 kB), `429` (rate limit) or a generic `500`. If the AI fails, plan and refine still return `200` with `aiStatus: "fallback"`.
+
 ## Security
 - The Groq API key lives only in server environment variables (local `.env`, Render dashboard); it is never sent to the browser, logged or committed.
 - All inputs and AI outputs are validated with strict schemas; user text is length-limited and treated as data in prompts.
@@ -84,6 +120,8 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - Status is never colour-only (icons + text such as "▼ Down ₹4,505", "Over by ₹6,984").
 - WCAG AA contrast on every text/background pair (measured values documented in `web/src/styles/tokens.css`).
 - All GSAP motion runs inside `gsap.matchMedia()` and is off for `prefers-reduced-motion`; layouts work from 320 px.
+- `aria-busy` on the wizard and refine box while a request is running.
+- Windows High Contrast (`forced-colors`) support: focus, selected chips, the current step and budget bars switch to system colours.
 - Automated `jest-axe` checks on every screen, including loading, error and refine-failure states; Hindi output for Hindi-speaking hosts.
 
 ## Testing
@@ -134,6 +172,19 @@ Render reads `render.yaml`: one free web service, build `npm ci --include=dev &&
 
 ## Tech stack (all free)
 TypeScript · React · Vite · GSAP · Fontsource (self-hosted fonts) · Node.js · Express · Helmet · Zod · Groq API · Vitest · Testing Library · jest-axe · ESLint · Prettier · GitHub Actions · Render
+
+## How this maps to the evaluation criteria
+| Criterion | Where to look |
+|---|---|
+| **Problem alignment** | "How it addresses the challenge" table above; the three event types in `shared/src/engine/rules/*`; personalized ideas and refine in `server/src/ai/*` |
+| **Code quality** | Strict TypeScript (no `any`), one Zod contract shared by engine, API and web; small single-purpose modules; rules as data; dependency-injected AI service; pure engine; JSDoc and *why* comments; ESLint + Prettier in CI |
+| **Security** | Key only on the server, log redaction, secret scans (files, bundle, full history); strict Zod validation; same-origin CSP, HSTS, Permissions-Policy; per-IP + global rate limits; prompt-injection handling with tests; `no-store` API answers |
+| **Efficiency** | Engine runs in the browser for instant what-ifs; ~106 kB gzip first load with lazy dashboard/GSAP; AI cache, one time budget, cancel on disconnect; compression and immutable asset caching |
+| **Testing** | 466 Vitest tests (engine 100% lines), Groq always mocked, injection and failure-mode tests, `jest-axe` on every screen, coverage thresholds that fail CI |
+| **Accessibility** | Labels, keyboard flow, focus management, `aria-live`/`aria-busy`, icon + text status, AA contrast (documented), reduced motion, forced colours, `lang="hi"` for Hindi |
+
+## Future work
+Multiple saved events · a fully Hindi interface (not only AI content) · shared plans for a family or committee · vendor marketplace links · reminders before each milestone.
 
 ## License
 [MIT](LICENSE)

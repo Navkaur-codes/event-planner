@@ -61,7 +61,7 @@ export function RefineBox({ input, explanation, onRefined }: RefineBoxProps) {
   const describedBy = emptyError ? 'refine-count refine-error' : 'refine-count';
 
   return (
-    <section className="panel refine no-print" aria-labelledby="refine-title">
+    <section className="panel refine no-print" aria-labelledby="refine-title" aria-busy={loading}>
       <h2 id="refine-title">Tweak your plan</h2>
       <p className="panel__lead">
         Say what should change in plain words — the planner recalculates every number for you.

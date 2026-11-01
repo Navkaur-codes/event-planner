@@ -157,9 +157,12 @@ describe('Wizard', () => {
     next();
     next();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    const cancelButton = await screen.findByRole('button', { name: 'Cancel' });
+    expect(cancelButton.closest('.wizard')?.getAttribute('aria-busy')).toBe('true');
+    fireEvent.click(cancelButton);
     expect(signal?.aborted).toBe(true);
     expect(currentStep()).toMatch(/Step 4 of 4/);
+    expect(document.querySelector('.wizard')?.getAttribute('aria-busy')).toBe('false');
     expect(onPlanReady).not.toHaveBeenCalled();
   });
 

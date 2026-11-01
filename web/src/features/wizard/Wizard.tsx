@@ -109,7 +109,7 @@ export function Wizard({ eventType, source, onEventTypeChange, onPlanReady, onEx
   const eventNoun = EVENT_NOUN[draft.eventType];
 
   return (
-    <div className="wizard">
+    <div className="wizard" aria-busy={request.status === 'loading'}>
       <header className="wizard__header">
         <button type="button" className="link-button" onClick={onExit}>
           <span aria-hidden="true">← </span>Back to start

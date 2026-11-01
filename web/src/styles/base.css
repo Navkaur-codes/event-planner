@@ -589,3 +589,28 @@ body[data-event] .bunting--rani {
   margin: 0;
   color: var(--ink-soft);
 }
+
+/* Windows High Contrast / forced colours: box-shadows and backgrounds are dropped there, so
+   focus, selection and the budget bars get system-colour outlines and fills instead. */
+@media (forced-colors: active) {
+  :focus-visible,
+  .chip input:focus-visible + span {
+    outline: 3px solid CanvasText;
+    outline-offset: 2px;
+  }
+  .chip input:checked + span,
+  .stepper__item[data-state='current'] {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .bar {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+  .sticker,
+  .button,
+  .notice,
+  .bar-track {
+    border-color: CanvasText;
+  }
+}

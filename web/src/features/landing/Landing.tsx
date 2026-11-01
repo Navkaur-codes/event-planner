@@ -1,7 +1,8 @@
 import type { EventType, HealthResponse } from '@utsav/shared';
 import { useEffect, useState } from 'react';
 import { getHealth } from '../../api/client';
-import type { SavedPlan } from '../../state/storage';
+import { EVENT_LABELS, formatDate, formatMoney } from '../../lib/labels';
+import type { LibraryEntry, SavedPlan } from '../../state/storage';
 import { ImportPlanButton } from '../track/ImportPlanButton';
 
 const EVENT_CARDS: ReadonlyArray<{ type: EventType; title: string; blurb: string; cta: string }> = [
@@ -45,14 +46,15 @@ type HealthState =
 
 interface LandingProps {
   onStart: (eventType: EventType) => void;
-  /** Title of a saved plan, offered as "continue". */
-  savedTitle: string | null;
-  onOpenSaved: () => void;
+  /** Plans saved in this browser, newest first. */
+  plans: readonly LibraryEntry[];
+  onOpenSaved: (entry: LibraryEntry) => void;
+  onDeleteSaved: (id: string) => void;
   onImported: (saved: SavedPlan) => void;
 }
 
-/** Landing page: three event cards that start the wizard, plus the planner status. */
-export function Landing({ onStart, savedTitle, onOpenSaved, onImported }: LandingProps) {
+/** Landing page: event cards that start the wizard, the plans saved here, and the status. */
+export function Landing({ onStart, plans, onOpenSaved, onDeleteSaved, onImported }: LandingProps) {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
 
   useEffect(() => {
@@ -75,30 +77,32 @@ export function Landing({ onStart, savedTitle, onOpenSaved, onImported }: Landin
           Plan your celebration with a budget that adds up, a timeline that works backwards from the
           big day, a vendor checklist, and ideas made just for you.
         </p>
-        {savedTitle && (
-          <p className="hero__continue">
-            <button type="button" className="button button--ghost" onClick={onOpenSaved}>
-              Continue “{savedTitle}”
-            </button>
-          </p>
-        )}
       </header>
 
-      <ul className="event-cards" aria-label="Events Utsav can plan">
-        {EVENT_CARDS.map((card) => (
-          <li key={card.type} className="sticker event-card" data-event={card.type}>
-            <h2>{card.title}</h2>
-            <p>{card.blurb}</p>
-            <button
-              type="button"
-              className="button button--primary event-card__cta"
-              onClick={() => onStart(card.type)}
-            >
-              {card.cta} <span aria-hidden="true">→</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div
+        className={
+          plans.length > 0 ? 'landing-layout landing-layout--with-plans' : 'landing-layout'
+        }
+      >
+        <ul className="event-cards" aria-label="Events Utsav can plan">
+          {EVENT_CARDS.map((card) => (
+            <li key={card.type} className="sticker event-card" data-event={card.type}>
+              <h2>{card.title}</h2>
+              <p>{card.blurb}</p>
+              <button
+                type="button"
+                className="button button--primary event-card__cta"
+                onClick={() => onStart(card.type)}
+              >
+                {card.cta} <span aria-hidden="true">→</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {plans.length > 0 && (
+          <SavedPlans plans={plans} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
+        )}
+      </div>
 
       <section className="how-it-works" aria-labelledby="how-title">
         <h2 id="how-title">How it works</h2>
@@ -126,6 +130,59 @@ export function Landing({ onStart, savedTitle, onOpenSaved, onImported }: Landin
         </p>
       </footer>
     </>
+  );
+}
+
+interface SavedPlansProps {
+  plans: readonly LibraryEntry[];
+  onOpen: (entry: LibraryEntry) => void;
+  onDelete: (id: string) => void;
+}
+
+/** "Your plans": every plan saved in this browser, newest first, to reopen or delete. */
+function SavedPlans({ plans, onOpen, onDelete }: SavedPlansProps) {
+  return (
+    <section className="saved-plans sticker" aria-labelledby="saved-plans-title">
+      <h2 id="saved-plans-title">Your plans</h2>
+      <p className="saved-plans__lead">Saved in this browser only.</p>
+      <ul>
+        {plans.map((entry) => {
+          const { input, budget } = entry.plan.response.plan;
+          return (
+            <li key={entry.id} className="saved-plan" data-event={input.eventType}>
+              <p className="saved-plan__kicker">{EVENT_LABELS[input.eventType]}</p>
+              <h3>{input.title}</h3>
+              <p className="saved-plan__meta">
+                {formatDate(input.eventDate)} · {input.city} ·{' '}
+                {formatMoney(budget.total, budget.currency)}
+              </p>
+              <div className="saved-plan__actions">
+                <button
+                  type="button"
+                  className="button button--primary"
+                  aria-label={`Open plan ${input.title}`}
+                  onClick={() => onOpen(entry)}
+                >
+                  Open
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  aria-label={`Delete plan ${input.title}`}
+                  onClick={() => {
+                    if (window.confirm(`Delete “${input.title}” from this browser?`)) {
+                      onDelete(entry.id);
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

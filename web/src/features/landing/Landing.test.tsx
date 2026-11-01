@@ -1,5 +1,7 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { planResponse } from '../../mocks/fixtures';
+import type { LibraryEntry } from '../../state/storage';
 import { jsonResponse } from '../../test/helpers';
 import { Landing } from './Landing';
 
@@ -10,8 +12,20 @@ const health = {
   aiConfigured: false,
 };
 
-function renderLanding(savedTitle: string | null = null) {
-  const props = { onStart: vi.fn(), savedTitle, onOpenSaved: vi.fn(), onImported: vi.fn() };
+const entry = {
+  id: 'p-1',
+  savedAt: '2026-11-01T10:00:00.000Z',
+  plan: { version: 2 as const, response: planResponse, celebrated: true, actuals: {} },
+};
+
+function renderLanding(plans: LibraryEntry[] = []) {
+  const props = {
+    onStart: vi.fn(),
+    plans,
+    onOpenSaved: vi.fn(),
+    onDeleteSaved: vi.fn(),
+    onImported: vi.fn(),
+  };
   render(<Landing {...props} />);
   return props;
 }
@@ -36,11 +50,18 @@ describe('Landing', () => {
     expect(await screen.findByText('Planner ready · v1.0.0')).toBeTruthy();
   });
 
-  it('offers to continue a saved plan and starts each event type', async () => {
+  it('lists saved plans to open or delete, and starts each event type', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse(health));
-    const props = renderLanding('Aarav turns 7');
-    fireEvent.click(screen.getByRole('button', { name: /Continue .Aarav turns 7./ }));
-    expect(props.onOpenSaved).toHaveBeenCalledOnce();
+    vi.stubGlobal('confirm', vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true));
+    const props = renderLanding([entry]);
+    const yourPlans = screen.getByRole('region', { name: 'Your plans' });
+    expect(within(yourPlans).getByText(/Birthday/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open plan Aarav turns 7' }));
+    expect(props.onOpenSaved).toHaveBeenCalledWith(entry);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    expect(props.onDeleteSaved).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    expect(props.onDeleteSaved).toHaveBeenCalledWith('p-1');
     fireEvent.click(screen.getByRole('button', { name: /Plan a community event/ }));
     expect(props.onStart).toHaveBeenCalledWith('community');
     await screen.findByText(/Planner ready/);

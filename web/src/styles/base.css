@@ -590,6 +590,72 @@ body[data-event] .bunting--rani {
   color: var(--ink-soft);
 }
 
+/* ---------------------------------------------------------------- your plans */
+
+.landing-layout--with-plans {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-4);
+  align-items: start;
+}
+.landing-layout--with-plans .event-cards {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+@media (max-width: 900px) {
+  .landing-layout--with-plans {
+    grid-template-columns: 1fr;
+  }
+}
+.saved-plans {
+  --tilt: 0.5deg;
+  margin-bottom: var(--space-5);
+}
+.saved-plans h2 {
+  font-size: 1.6rem;
+  margin-bottom: var(--space-1);
+}
+.saved-plans__lead {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+.saved-plans ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.saved-plan {
+  border: 2px solid var(--ink);
+  border-left: 8px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--paper);
+}
+.saved-plan__kicker {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+.saved-plan h3 {
+  font-size: 1.2rem;
+  margin: var(--space-1) 0;
+}
+.saved-plan__meta {
+  margin: 0 0 var(--space-2);
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+.saved-plan__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 /* Windows High Contrast / forced colours: box-shadows and backgrounds are dropped there, so
    focus, selection and the budget bars get system-colour outlines and fills instead. */
 @media (forced-colors: active) {

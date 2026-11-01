@@ -13,6 +13,8 @@ const base: PlanState = {
   actuals: {},
   lastRefine: null,
   planId: 1,
+  activeId: 'p-1',
+  library: [],
 };
 
 /** The fixture with the budget cut to 48,000 (food and venue lower) and one checklist item new. */
@@ -83,14 +85,26 @@ describe('planReducer', () => {
       actuals: { food: 1 },
       lastRefine: { explanation: 'x', changes: {} },
     };
-    const fresh = planReducer(busy, { type: 'planReady', response: planResponse });
-    expect(fresh).toMatchObject({ actuals: {}, lastRefine: null, celebrated: false, planId: 2 });
+    const fresh = planReducer(busy, { type: 'planReady', response: planResponse, id: 'p-new' });
+    expect(fresh).toMatchObject({
+      actuals: {},
+      lastRefine: null,
+      celebrated: false,
+      planId: 2,
+      activeId: 'p-new',
+    });
 
     const imported = planReducer(busy, {
       type: 'imported',
       saved: { version: 2, response: planResponse, celebrated: false, actuals: { venue: 5 } },
+      id: 'p-imp',
     });
-    expect(imported).toMatchObject({ actuals: { venue: 5 }, celebrated: true, planId: 2 });
+    expect(imported).toMatchObject({
+      actuals: { venue: 5 },
+      celebrated: true,
+      planId: 2,
+      activeId: 'p-imp',
+    });
   });
 });
 
@@ -99,7 +113,6 @@ describe('planReducer without a plan', () => {
 
   it('ignores plan-only actions until a plan exists', () => {
     expect(planReducer(empty, { type: 'edit' })).toBe(empty);
-    expect(planReducer(empty, { type: 'openPlan' })).toBe(empty);
     expect(planReducer(empty, { type: 'toggleItem', id: 'c-cake' })).toBe(empty);
     expect(planReducer(empty, { type: 'refined', response: refined, explanation: 'Cut 20%' })).toBe(
       empty,
@@ -122,11 +135,36 @@ describe('planReducer navigation', () => {
     const home = planReducer(editing, { type: 'home' });
     expect(home).toMatchObject({ view: 'landing', eventType: null });
     expect(home.response).toBe(planResponse);
+  });
 
-    expect(planReducer(home, { type: 'openPlan' })).toMatchObject({
+  it('opens a saved plan from the library with its own ticks and tracker', () => {
+    const entry = {
+      id: 'p-9',
+      savedAt: '2026-11-01T10:00:00.000Z',
+      plan: { version: 2 as const, response: planResponse, celebrated: true, actuals: { food: 7 } },
+    };
+    const home = { ...base, view: 'landing' as const, response: null, activeId: null };
+    expect(planReducer(home, { type: 'openSaved', entry })).toMatchObject({
       view: 'plan',
       eventType: planResponse.plan.input.eventType,
+      response: planResponse,
+      actuals: { food: 7 },
+      activeId: 'p-9',
+      planId: 2,
     });
+  });
+
+  it('closes the open plan when it is deleted, but not when another one is', () => {
+    const entry = {
+      id: 'p-1',
+      savedAt: '2026-11-01T10:00:00.000Z',
+      plan: { version: 2 as const, response: planResponse, celebrated: true, actuals: {} },
+    };
+    const kept = planReducer(base, { type: 'libraryChanged', library: [entry] });
+    expect(kept).toMatchObject({ response: planResponse, activeId: 'p-1', library: [entry] });
+
+    const gone = planReducer(base, { type: 'libraryChanged', library: [] });
+    expect(gone).toMatchObject({ response: null, activeId: null, view: 'landing', library: [] });
   });
 
   it('marks the celebration as played', () => {

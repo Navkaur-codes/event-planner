@@ -1,7 +1,7 @@
 import { BudgetCategorySchema, LIMITS, PlanResponseSchema } from '@utsav/shared';
 import { z } from 'zod';
 
-/** Bump the version when the saved shape changes; `parseSavedPlan` migrates older saves. */
+/** Single-plan keys from earlier versions, read once and migrated into the library. */
 export const STORAGE_KEY = 'utsav:plan:v2';
 const LEGACY_STORAGE_KEY = 'utsav:plan:v1';
 
@@ -36,34 +36,82 @@ export function parseSavedPlan(data: unknown): SavedPlan | null {
   return legacy.success ? { ...legacy.data, version: 2, actuals: {} } : null;
 }
 
-/** Reads the saved plan; returns null when absent, unreadable or failing the schema. */
-export function loadSavedPlan(): SavedPlan | null {
+// ---------------------------------------------------------------- plan library
+
+/** Every plan made in this browser, newest first. Single-plan saves are migrated in. */
+export const LIBRARY_KEY = 'utsav:plans:v3';
+export const MAX_SAVED_PLANS = 10;
+
+const LibraryEntrySchema = z.strictObject({
+  id: z.string().min(1).max(40),
+  savedAt: z.iso.datetime(),
+  plan: SavedPlanSchema,
+});
+
+export type LibraryEntry = z.infer<typeof LibraryEntrySchema>;
+
+/** A fresh, collision-safe id for a new plan in this browser. */
+export function newPlanId(): string {
+  return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Reads the library; unreadable or tampered entries are dropped, never trusted. */
+export function loadLibrary(): LibraryEntry[] {
   try {
-    const raw =
-      window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
-    return raw ? parseSavedPlan(JSON.parse(raw)) : null;
+    const raw = window.localStorage.getItem(LIBRARY_KEY);
+    if (raw) {
+      const data: unknown = JSON.parse(raw);
+      if (!Array.isArray(data)) return [];
+      return data.flatMap((entry) => {
+        const parsed = LibraryEntrySchema.safeParse(entry);
+        return parsed.success ? [parsed.data] : [];
+      });
+    }
+    return migrateSinglePlan();
   } catch {
-    return null;
+    return [];
   }
 }
 
-/** Saves the plan; storage being full or blocked (private mode) is ignored on purpose. */
-export function savePlan(plan: Omit<SavedPlan, 'version'>): void {
-  const saved: SavedPlan = { version: 2, ...plan };
+/** Saves (or updates) one plan and moves it to the top; returns the new library. */
+export function saveToLibrary(
+  id: string,
+  plan: Omit<SavedPlan, 'version'>,
+  now: Date = new Date(),
+): LibraryEntry[] {
+  const entry: LibraryEntry = { id, savedAt: now.toISOString(), plan: { version: 2, ...plan } };
+  const library = [entry, ...loadLibrary().filter((saved) => saved.id !== id)].slice(
+    0,
+    MAX_SAVED_PLANS,
+  );
+  writeLibrary(library);
+  return library;
+}
+
+/** Deletes one plan; returns the new library. */
+export function removeFromLibrary(id: string): LibraryEntry[] {
+  const library = loadLibrary().filter((saved) => saved.id !== id);
+  writeLibrary(library);
+  return library;
+}
+
+function writeLibrary(library: LibraryEntry[]): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    window.localStorage.setItem(LIBRARY_KEY, JSON.stringify(library));
   } catch {
-    // The plan still works for this visit; it just will not survive a reload.
+    // Storage full or blocked (private mode): plans still work for this visit.
   }
 }
 
-/** Removes the saved plan. */
-export function clearSavedPlan(): void {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-    // Nothing to clear when storage is unavailable.
-  }
+/** Earlier versions kept one plan; it becomes the first library entry. */
+function migrateSinglePlan(): LibraryEntry[] {
+  const raw =
+    window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  const plan = raw ? parseSavedPlan(JSON.parse(raw)) : null;
+  if (!plan) return [];
+  const library: LibraryEntry[] = [{ id: newPlanId(), savedAt: new Date().toISOString(), plan }];
+  writeLibrary(library);
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  return library;
 }

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import type { PlanResponse, RefineResponse } from '@utsav/shared';
 import { planRequest, planResponse } from './mocks/fixtures';
-import { STORAGE_KEY, loadSavedPlan, savePlan } from './state/storage';
+import { LIBRARY_KEY, loadLibrary, saveToLibrary } from './state/storage';
 import { fill, fillBasics, jsonResponse, next, pinToday } from './test/helpers';
 
 const health = {
@@ -115,33 +115,51 @@ describe('App', () => {
     next();
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Aarav turns 7' })).toBeTruthy();
-    expect(loadSavedPlan()?.response).toEqual(planResponse);
+    expect(loadLibrary()).toHaveLength(1);
+    expect(loadLibrary()[0]?.plan.response).toEqual(planResponse);
 
     fireEvent.click(screen.getByRole('checkbox', { name: /Order eggless themed cake/ }));
     expect(screen.getByText('1 of 3 done · 33%')).toBeTruthy();
-    expect(loadSavedPlan()?.response.plan.checklist[0]?.done).toBe(true);
-    expect(loadSavedPlan()?.celebrated).toBe(true);
+    expect(loadLibrary()[0]?.plan.response.plan.checklist[0]?.done).toBe(true);
+    expect(loadLibrary()[0]?.plan.celebrated).toBe(true);
   });
 
-  it('restores a saved plan on reload and ignores a tampered one', async () => {
+  it('opens on the main page, lists saved plans and reopens one; ignores tampered data', async () => {
     stubApi();
-    savePlan({ response: planResponse, celebrated: true, actuals: {} });
+    saveToLibrary('p-1', { response: planResponse, celebrated: true, actuals: {} });
     const { unmount } = render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Utsav' })).toBeTruthy();
+    const yourPlans = screen.getByRole('region', { name: 'Your plans' });
+    expect(within(yourPlans).getByRole('heading', { name: 'Aarav turns 7' })).toBeTruthy();
+    fireEvent.click(within(yourPlans).getByRole('button', { name: 'Open plan Aarav turns 7' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Aarav turns 7' })).toBeTruthy();
     unmount();
 
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ version: 2, response: { hacked: 1 }, celebrated: true, actuals: {} }),
-    );
+    window.localStorage.setItem(LIBRARY_KEY, JSON.stringify([{ id: 'x', hacked: true }]));
     render(<App />);
     expect(screen.getByRole('heading', { level: 1, name: 'Utsav' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Your plans' })).toBeNull();
+  });
+
+  it('deletes a saved plan from the main page after confirming', () => {
+    stubApi();
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    );
+    saveToLibrary('p-1', { response: planResponse, celebrated: true, actuals: {} });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    expect(window.confirm).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('region', { name: 'Your plans' })).toBeNull();
+    expect(loadLibrary()).toEqual([]);
   });
 
   it('refines the plan in place from a suggestion chip, without a reload', async () => {
     const fetchMock = stubApi();
-    savePlan({ response: planResponse, celebrated: true, actuals: {} });
+    saveToLibrary('p-1', { response: planResponse, celebrated: true, actuals: {} });
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open plan Aarav turns 7' }));
     await screen.findByRole('heading', { level: 1, name: 'Aarav turns 7' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Cut budget 20%' }));
@@ -160,7 +178,7 @@ describe('App', () => {
     expect(within(table).getByText('₹48,000')).toBeTruthy();
     expect(within(table).getAllByText(/Down ₹/).length).toBe(5);
     expect(screen.getByText(/Your last tweak changed 5 line/)).toBeTruthy();
-    await waitFor(() => expect(loadSavedPlan()?.response.plan.budget.total).toBe(48000));
+    await waitFor(() => expect(loadLibrary()[0]?.plan.response.plan.budget.total).toBe(48000));
   });
 
   it('imports a plan file from the landing page and rejects a tampered one', async () => {

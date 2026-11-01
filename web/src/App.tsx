@@ -2,7 +2,7 @@ import type { BudgetCategory, EventType, PlanResponse, RefineResponse } from '@u
 import { lazy, Suspense, useCallback, useEffect } from 'react';
 import { Landing } from './features/landing/Landing';
 import { Wizard } from './features/wizard/Wizard';
-import type { SavedPlan } from './state/storage';
+import { newPlanId, removeFromLibrary, type SavedPlan } from './state/storage';
 import { usePlanStore } from './state/usePlanStore';
 
 // The dashboard (and the GSAP chunk it pulls in) is split out of the first page load and
@@ -25,7 +25,8 @@ export function App() {
   }, [view]);
 
   const handlePlanReady = useCallback(
-    (planResponse: PlanResponse) => dispatch({ type: 'planReady', response: planResponse }),
+    (planResponse: PlanResponse) =>
+      dispatch({ type: 'planReady', response: planResponse, id: newPlanId() }),
     [dispatch],
   );
   const handleRefined = useCallback(
@@ -39,7 +40,7 @@ export function App() {
     [dispatch],
   );
   const handleImported = useCallback(
-    (saved: SavedPlan) => dispatch({ type: 'imported', saved }),
+    (saved: SavedPlan) => dispatch({ type: 'imported', saved, id: newPlanId() }),
     [dispatch],
   );
   const handleEventTypeChange = useCallback(
@@ -58,8 +59,11 @@ export function App() {
         {view === 'landing' && (
           <Landing
             onStart={(type) => dispatch({ type: 'start', eventType: type })}
-            savedTitle={response?.plan.input.title ?? null}
-            onOpenSaved={() => dispatch({ type: 'openPlan' })}
+            plans={state.library}
+            onOpenSaved={(entry) => dispatch({ type: 'openSaved', entry })}
+            onDeleteSaved={(id) =>
+              dispatch({ type: 'libraryChanged', library: removeFromLibrary(id) })
+            }
             onImported={handleImported}
           />
         )}

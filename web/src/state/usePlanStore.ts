@@ -1,7 +1,13 @@
 import type { BudgetCategory, EventInput, EventType, PlanResponse } from '@utsav/shared';
 import { useEffect, useReducer } from 'react';
 import { diffBudget, type BudgetChanges } from '../lib/budgetDiff';
-import { loadSavedPlan, savePlan, type Actuals, type SavedPlan } from './storage';
+import {
+  loadLibrary,
+  saveToLibrary,
+  type Actuals,
+  type LibraryEntry,
+  type SavedPlan,
+} from './storage';
 
 export type View = 'landing' | 'wizard' | 'plan';
 
@@ -25,19 +31,24 @@ export interface PlanState {
   lastRefine: LastRefine | null;
   /** Changes whenever a different plan is loaded, so the dashboard starts fresh. */
   planId: number;
+  /** Library id of the plan on screen; null before the first plan. */
+  activeId: string | null;
+  /** Plans saved in this browser, newest first (shown on the landing page). */
+  library: LibraryEntry[];
 }
 
 export type PlanAction =
   | { type: 'start'; eventType: EventType }
   | { type: 'setEventType'; eventType: EventType }
   | { type: 'edit' }
-  | { type: 'planReady'; response: PlanResponse }
+  | { type: 'planReady'; response: PlanResponse; id: string }
   | { type: 'refined'; response: PlanResponse; explanation: string }
-  | { type: 'imported'; saved: SavedPlan }
+  | { type: 'imported'; saved: SavedPlan; id: string }
   | { type: 'toggleItem'; id: string }
   | { type: 'setActual'; category: BudgetCategory; amount: number | null }
   | { type: 'celebrated' }
-  | { type: 'openPlan' }
+  | { type: 'openSaved'; entry: LibraryEntry }
+  | { type: 'libraryChanged'; library: LibraryEntry[] }
   | { type: 'home' };
 
 /** Pure state transitions for the whole app flow: landing → wizard → plan. */
@@ -61,6 +72,7 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
         actuals: {},
         lastRefine: null,
         planId: state.planId + 1,
+        activeId: action.id,
       };
     case 'refined':
       if (!state.response) return state;
@@ -82,6 +94,7 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
         actuals: action.saved.actuals,
         lastRefine: null,
         planId: state.planId + 1,
+        activeId: action.id,
       };
     case 'toggleItem':
       return state.response
@@ -96,10 +109,32 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
     }
     case 'celebrated':
       return { ...state, celebrated: true };
-    case 'openPlan':
-      return state.response
-        ? { ...state, view: 'plan', eventType: state.response.plan.input.eventType }
-        : state;
+    case 'openSaved':
+      return {
+        ...state,
+        view: 'plan',
+        eventType: action.entry.plan.response.plan.input.eventType,
+        response: action.entry.plan.response,
+        celebrated: action.entry.plan.celebrated,
+        actuals: action.entry.plan.actuals,
+        lastRefine: null,
+        planId: state.planId + 1,
+        activeId: action.entry.id,
+      };
+    case 'libraryChanged': {
+      // Deleting the plan that is open leaves nothing to show or save.
+      const stillThere = action.library.some((entry) => entry.id === state.activeId);
+      return stillThere || state.activeId === null
+        ? { ...state, library: action.library }
+        : {
+            ...state,
+            library: action.library,
+            response: null,
+            activeId: null,
+            view: 'landing',
+            eventType: null,
+          };
+    }
     case 'home':
       return { ...state, view: 'landing', eventType: null };
   }
@@ -119,8 +154,9 @@ function keepTicks(previous: PlanResponse, next: PlanResponse): PlanResponse {
   return { ...next, plan: { ...next.plan, checklist } };
 }
 
+/** Every visit starts on the landing page; saved plans are listed there, not reopened. */
 function initialState(): PlanState {
-  const empty: PlanState = {
+  return {
     view: 'landing',
     eventType: null,
     draftSource: null,
@@ -129,27 +165,24 @@ function initialState(): PlanState {
     actuals: {},
     lastRefine: null,
     planId: 0,
-  };
-  const saved = loadSavedPlan();
-  if (!saved) return empty;
-  return {
-    ...empty,
-    view: 'plan',
-    eventType: saved.response.plan.input.eventType,
-    response: saved.response,
-    celebrated: saved.celebrated,
-    actuals: saved.actuals,
+    activeId: null,
+    library: loadLibrary(),
   };
 }
 
-/** App state with the latest plan, checklist ticks and tracker persisted to localStorage. */
+/** App state; the plan on screen (ticks and tracker included) is saved to the library. */
 export function usePlanStore() {
   const [state, dispatch] = useReducer(planReducer, undefined, initialState);
-  const { response, celebrated, actuals } = state;
+  const { response, celebrated, actuals, activeId } = state;
 
   useEffect(() => {
-    if (response) savePlan({ response, celebrated, actuals });
-  }, [response, celebrated, actuals]);
+    if (response && activeId) {
+      dispatch({
+        type: 'libraryChanged',
+        library: saveToLibrary(activeId, { response, celebrated, actuals }),
+      });
+    }
+  }, [response, celebrated, actuals, activeId]);
 
   return [state, dispatch] as const;
 }

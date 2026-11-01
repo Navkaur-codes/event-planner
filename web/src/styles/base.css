@@ -592,22 +592,8 @@ body[data-event] .bunting--rani {
 
 /* ---------------------------------------------------------------- your plans */
 
-.landing-layout--with-plans {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--space-4);
-  align-items: start;
-}
-.landing-layout--with-plans .event-cards {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-@media (max-width: 900px) {
-  .landing-layout--with-plans {
-    grid-template-columns: 1fr;
-  }
-}
 .saved-plans {
-  --tilt: 0.5deg;
+  --tilt: 0deg;
   margin-bottom: var(--space-5);
 }
 .saved-plans h2 {
@@ -624,6 +610,7 @@ body[data-event] .bunting--rani {
   padding: 0;
   margin: 0;
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: var(--space-3);
 }
 .saved-plan {

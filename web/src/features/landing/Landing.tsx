@@ -90,35 +90,30 @@ export function Landing({ onStart, plans, onOpenSaved, onDeleteSaved, onImported
         </p>
       </header>
 
-      <div
-        className={
-          plans.length > 0 ? 'landing-layout landing-layout--with-plans' : 'landing-layout'
-        }
-      >
-        <ul className="event-cards" aria-label="Events Utsav can plan">
-          {EVENT_CARDS.map((card) => (
-            <li key={card.type} className="sticker event-card" data-event={card.type}>
-              <h2>{card.title}</h2>
-              <p>{card.blurb}</p>
-              <button
-                type="button"
-                className="button button--primary event-card__cta"
-                onClick={() => onStart(card.type)}
-              >
-                {card.cta} <span aria-hidden="true">→</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        {plans.length > 0 && (
-          <SavedPlans
-            plans={plans}
-            onOpen={onOpenSaved}
-            onDelete={onDeleteSaved}
-            headingRef={plansHeadingRef}
-          />
-        )}
-      </div>
+      {/* Returning visitors see their own plans first, as a full-width row. */}
+      {plans.length > 0 && (
+        <SavedPlans
+          plans={plans}
+          onOpen={onOpenSaved}
+          onDelete={onDeleteSaved}
+          headingRef={plansHeadingRef}
+        />
+      )}
+      <ul className="event-cards" aria-label="Events Utsav can plan">
+        {EVENT_CARDS.map((card) => (
+          <li key={card.type} className="sticker event-card" data-event={card.type}>
+            <h2>{card.title}</h2>
+            <p>{card.blurb}</p>
+            <button
+              type="button"
+              className="button button--primary event-card__cta"
+              onClick={() => onStart(card.type)}
+            >
+              {card.cta} <span aria-hidden="true">→</span>
+            </button>
+          </li>
+        ))}
+      </ul>
 
       <section className="how-it-works" aria-labelledby="how-title">
         <h2 id="how-title">How it works</h2>

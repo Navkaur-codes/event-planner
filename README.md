@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 486 automated tests in CI.
+> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 487 automated tests in CI.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com
 
 ---
@@ -125,13 +125,13 @@ Errors use one shape: `{ error: { code, message, issues? } }` with `400` (valida
 - Automated `jest-axe` checks on every screen, including loading, error and refine-failure states; Hindi output for Hindi-speaking hosts.
 
 ## Testing
-**486 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
+**487 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
 
 | Area | Tests | What they prove |
 |---|---|---|
 | Engine (`shared`) | 214 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
 | API + AI (`server`) | 174 · 94% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
-| Web (`web`) | 98 · 94% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
+| Web (`web`) | 99 · 94% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
 
 ## Assumptions
 - Plans stay in the visitor's own browser (up to 10, newest first, each schema-checked when loaded); no accounts are needed. To move a plan to another device, export and import it.
@@ -181,7 +181,7 @@ TypeScript · React · Vite · GSAP · Fontsource (self-hosted fonts) · Node.js
 | **Code quality** | Strict TypeScript (no `any`), one Zod contract shared by engine, API and web; small single-purpose modules; rules as data; dependency-injected AI service; pure engine; JSDoc and *why* comments; ESLint + Prettier in CI |
 | **Security** | Key only on the server, log redaction, secret scans (files, bundle, full history); strict Zod validation; same-origin CSP, HSTS, Permissions-Policy; per-IP + global rate limits; prompt-injection handling with tests; `no-store` API answers |
 | **Efficiency** | Engine runs in the browser for instant what-ifs; ~106 kB gzip first load with lazy dashboard/GSAP; AI cache, one time budget, cancel on disconnect; compression and immutable asset caching |
-| **Testing** | 486 Vitest tests (engine 100% lines), Groq always mocked, injection and failure-mode tests, `jest-axe` on every screen, coverage thresholds that fail CI |
+| **Testing** | 487 Vitest tests (engine 100% lines), Groq always mocked, injection and failure-mode tests, `jest-axe` on every screen, coverage thresholds that fail CI |
 | **Accessibility** | Labels, keyboard flow, focus management, `aria-live`/`aria-busy`, icon + text status, AA contrast (documented), reduced motion, forced colours, `lang="hi"` for Hindi |
 
 ## Future work

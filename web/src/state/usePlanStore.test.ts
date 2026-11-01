@@ -175,6 +175,32 @@ describe('planReducer navigation', () => {
     expect(fresh.activeId).toBe('p-new');
   });
 
+  it('keeps ticks, tracked spend and the played confetti when an edited plan is regenerated', () => {
+    const tickedId = planResponse.plan.checklist[0]?.id ?? '';
+    const worked = planReducer(
+      { ...base, actuals: { food: 12000, attire: 5000 }, celebrated: true },
+      { type: 'toggleItem', id: tickedId },
+    );
+    const editing = planReducer(worked, { type: 'edit' });
+    const regenerated = planReducer(editing, {
+      type: 'planReady',
+      response: planResponse,
+      id: 'p-new',
+    });
+    // Attire is not in the regenerated budget, so its tracked spend is dropped.
+    expect(regenerated.actuals).toEqual({ food: 12000 });
+    expect(regenerated.celebrated).toBe(true);
+    expect(regenerated.response?.plan.checklist.find((item) => item.id === tickedId)?.done).toBe(
+      true,
+    );
+
+    const brandNew = planReducer(
+      { ...worked, draftSource: null },
+      { type: 'planReady', response: planResponse, id: 'p-new' },
+    );
+    expect(brandNew).toMatchObject({ actuals: {}, celebrated: false });
+  });
+
   it('only marks real changes for saving, not opening a plan', () => {
     const entry = {
       id: 'p-2',

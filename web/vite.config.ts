@@ -27,6 +27,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Full-DOM interaction tests can run slowly on a busy CI runner under coverage.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

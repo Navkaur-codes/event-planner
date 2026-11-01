@@ -65,21 +65,24 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
       return state.response
         ? { ...state, view: 'wizard', draftSource: state.response.plan.input }
         : state;
-    case 'planReady':
+    case 'planReady': {
+      // Regenerating from "Edit details" updates that saved plan instead of adding a copy,
+      // and keeps what the host already did: ticks, tracked spend and the played confetti.
+      const editing = state.draftSource !== null && state.activeId !== null && state.response;
       return {
         ...state,
         view: 'plan',
         eventType: action.response.plan.input.eventType,
-        response: action.response,
-        celebrated: false,
-        actuals: {},
+        response: editing ? keepTicks(editing, action.response) : action.response,
+        celebrated: editing ? state.celebrated : false,
+        actuals: editing ? keepActuals(state.actuals, action.response) : {},
         lastRefine: null,
         planId: state.planId + 1,
-        // Regenerating from "Edit details" updates that saved plan instead of adding a copy.
-        activeId: state.draftSource && state.activeId ? state.activeId : action.id,
+        activeId: editing ? state.activeId : action.id,
         draftSource: null,
         unsaved: true,
       };
+    }
     case 'refined':
       if (!state.response) return state;
       return {
@@ -158,6 +161,14 @@ function toggleChecklistItem(response: PlanResponse, id: string): PlanResponse {
     item.id === id ? { ...item, done: !item.done } : item,
   );
   return { ...response, plan: { ...response.plan, checklist } };
+}
+
+/** Tracked spend survives a regenerate only for budget categories the new plan still has. */
+function keepActuals(actuals: Actuals, next: PlanResponse): Actuals {
+  const categories = new Set(next.plan.budget.lines.map((line) => line.category));
+  return Object.fromEntries(
+    Object.entries(actuals).filter(([category]) => categories.has(category as BudgetCategory)),
+  );
 }
 
 /** A refined plan keeps the ticks of checklist items that still exist (ids are stable). */

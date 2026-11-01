@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 466 automated tests in CI.
+> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 475 automated tests in CI.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com
 
 ---
@@ -45,7 +45,7 @@ Utsav splits the work between two layers so each does what it is best at:
 | **Vendor checklists** | Vendors and tasks chosen by type, size and needs (Jain/halal/vegan caterer checks, wheelchair access, permits, rentals) | `engine/checklist.ts`, `rules/vendors.ts` |
 | **Personalized ideas** | GenAI themes, decor, food, activities, personal touches and vendor questions for the city, vibe and traditions, in English or Hindi | `server/src/ai/*` |
 | **Logical decisions from user context** | Rules as data; warnings for low per-guest budget, short notice, large crowds, conflicting choices | `engine/warnings.ts`, `rules/thresholds.ts` |
-| **Dynamic assistant** | Plain-language refine ("cut the budget by 20%", "move it outdoors") → validated change → whole plan recalculated | `POST /api/refine`, `ai/refineParser.ts`, `engine/patch.ts` |
+| **Dynamic assistant** | Plain-language refine ("cut the budget by 20%", "more money for photography", "move it to Delhi", "ideas in Hindi") → validated change → whole plan recalculated | `POST /api/refine`, `ai/refineParser.ts`, `engine/patch.ts` |
 | **Real-world usability** | Saved in the browser, export/import, print, calendar, works when the AI is down, accessible, phone-friendly | `web/src/state/*`, `web/src/features/track/*` |
 
 ### Deliberate boundaries
@@ -62,7 +62,7 @@ Utsav splits the work between two layers so each does what it is best at:
    - **Timeline** counted back from the big day, compressed (with a warning) if the date is close.
    - **Vendor checklist** that changes with your needs (e.g. Jain/halal caterer checks, wheelchair access, permits for large crowds).
    - **Ideas for you** — themes, decor, food, activities, personal touches and questions to ask vendors, written by the AI for your city, vibe and traditions.
-4. **Refine it in plain words** — type or tap a suggestion: "Cut budget 20%", "Make it eco-friendly", "Add 20 guests", "Move it outdoors". The AI turns your words into a structured change; the engine recalculates everything and highlights what changed.
+4. **Refine it in plain words** — type or tap a suggestion: "Cut budget 20%", "Make it eco-friendly", "Add 20 guests", "More money for photography", "Move it to Delhi", "Give me ideas in Hindi". The AI turns your words into a structured change; the engine recalculates everything and highlights what changed.
 5. **Try what-ifs** — drag the guest and budget sliders to preview the new split instantly (computed in your browser, no AI call), then apply the change with refine.
 6. **Track and share** — enter what you actually spent per category (over-budget lines are flagged), tick off checklist items (confetti at 100%), add the timeline to your calendar (.ics), export the plan as a file, import it on another device, or print a clean one-page copy.
 7. Close the tab and come back — your plan is still there.
@@ -125,12 +125,12 @@ Errors use one shape: `{ error: { code, message, issues? } }` with `400` (valida
 - Automated `jest-axe` checks on every screen, including loading, error and refine-failure states; Hindi output for Hindi-speaking hosts.
 
 ## Testing
-**466 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
+**475 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
 
 | Area | Tests | What they prove |
 |---|---|---|
-| Engine (`shared`) | 213 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
-| API + AI (`server`) | 166 · 95% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
+| Engine (`shared`) | 214 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
+| API + AI (`server`) | 174 · 94% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
 | Web (`web`) | 87 · 93% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
 
 ## Assumptions
@@ -180,7 +180,7 @@ TypeScript · React · Vite · GSAP · Fontsource (self-hosted fonts) · Node.js
 | **Code quality** | Strict TypeScript (no `any`), one Zod contract shared by engine, API and web; small single-purpose modules; rules as data; dependency-injected AI service; pure engine; JSDoc and *why* comments; ESLint + Prettier in CI |
 | **Security** | Key only on the server, log redaction, secret scans (files, bundle, full history); strict Zod validation; same-origin CSP, HSTS, Permissions-Policy; per-IP + global rate limits; prompt-injection handling with tests; `no-store` API answers |
 | **Efficiency** | Engine runs in the browser for instant what-ifs; ~106 kB gzip first load with lazy dashboard/GSAP; AI cache, one time budget, cancel on disconnect; compression and immutable asset caching |
-| **Testing** | 466 Vitest tests (engine 100% lines), Groq always mocked, injection and failure-mode tests, `jest-axe` on every screen, coverage thresholds that fail CI |
+| **Testing** | 475 Vitest tests (engine 100% lines), Groq always mocked, injection and failure-mode tests, `jest-axe` on every screen, coverage thresholds that fail CI |
 | **Accessibility** | Labels, keyboard flow, focus management, `aria-live`/`aria-busy`, icon + text status, AA contrast (documented), reduced motion, forced colours, `lang="hi"` for Hindi |
 
 ## Future work

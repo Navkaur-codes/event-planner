@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 
-export const CONTRACTS_VERSION = 'v1.1';
+export const CONTRACTS_VERSION = 'v1.2';
 
 // ---------------------------------------------------------------- helpers
 
@@ -217,6 +217,9 @@ export const PlanPatchSchema = z.strictObject({
   priorities: uniqueArray(PrioritySchema, LIMITS.maxPriorities).optional(),
   vibe: text(200).optional(),
   ideaFocus: text(200).optional(),
+  city: requiredText(60).optional(),
+  cityTier: CityTierSchema.optional(),
+  language: LanguageSchema.optional(),
 });
 
 export const RefineResponseSchema = z.strictObject({

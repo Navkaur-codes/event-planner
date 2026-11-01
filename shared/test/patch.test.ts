@@ -4,6 +4,18 @@ import { applyPatch } from '../src/engine/index.js';
 import { makeInput } from './fixtures.js';
 
 describe('applyPatch', () => {
+  it('moves the event to a new city and size, and switches the idea language (v1.2)', () => {
+    const moved = applyPatch(makeInput(), { city: '  Delhi ', cityTier: 'metro', language: 'hi' });
+    expect(moved).toMatchObject({ city: 'Delhi', cityTier: 'metro', language: 'hi' });
+    expect(EventInputSchema.safeParse(moved).success).toBe(true);
+    const unchanged = applyPatch(makeInput(), {});
+    expect(unchanged).toMatchObject({
+      city: makeInput().city,
+      cityTier: makeInput().cityTier,
+      language: makeInput().language,
+    });
+  });
+
   it('applies a percentage change exactly', () => {
     expect(applyPatch(makeInput(), { budgetChangePercent: -20 }).budget).toBe(48_000);
   });

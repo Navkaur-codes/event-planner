@@ -5,7 +5,7 @@
 import { PlanPatchSchema, type EventInput, type PlanPatch } from '@utsav/shared';
 import { z } from 'zod';
 import { revealsPrompt, sanitize, truncateText } from './parse.js';
-import { numbersIn, type Interpretation } from './refineParser.js';
+import { languageFrom, numbersIn, prioritiesFrom, type Interpretation } from './refineParser.js';
 
 const MAX_EXPLANATION = 300;
 
@@ -32,7 +32,7 @@ export function parsePatch(raw: string, input: EventInput, message: string): Pat
   }
   if (revealsPrompt(result.data)) return { ok: false, failure: 'leak' };
 
-  const patch = keepStatedNumbers(result.data.patch, input, message);
+  const patch = withRuleBackup(keepStatedFacts(result.data.patch, input, message), input, message);
   const droppedEverything =
     Object.keys(patch).length === 0 && Object.keys(result.data.patch).length > 0;
   if (droppedEverything) return { ok: false, failure: 'unstated_numbers' };
@@ -42,8 +42,25 @@ export function parsePatch(raw: string, input: EventInput, message: string): Pat
   };
 }
 
-/** Removes numeric or date fields whose value does not come from the message. */
-function keepStatedNumbers(patch: PlanPatch, input: EventInput, message: string): PlanPatch {
+/**
+ * Fills in what the rules can read for certain when the model left it out, e.g. the model put
+ * "more money for photography" only in ideaFocus, but the budget split must still shift.
+ */
+function withRuleBackup(patch: PlanPatch, input: EventInput, message: string): PlanPatch {
+  const copy: PlanPatch = { ...patch };
+  if (copy.priorities === undefined) {
+    const priorities = prioritiesFrom(input, message);
+    if (priorities) copy.priorities = priorities;
+  }
+  if (copy.language === undefined) {
+    const language = languageFrom(input, message);
+    if (language) copy.language = language;
+  }
+  return copy;
+}
+
+/** Removes numeric, date or city fields whose value does not come from the message. */
+function keepStatedFacts(patch: PlanPatch, input: EventInput, message: string): PlanPatch {
   const stated = numbersIn(message);
   const copy: PlanPatch = { ...patch };
   if (copy.budget !== undefined && !stated.has(copy.budget)) delete copy.budget;
@@ -62,5 +79,9 @@ function keepStatedNumbers(patch: PlanPatch, input: EventInput, message: string)
   if (copy.eventDate !== undefined && !stated.has(Number(copy.eventDate.slice(8, 10)))) {
     delete copy.eventDate;
   }
+  // A new city must be one the host actually wrote; its size only travels with it.
+  const city = copy.city?.trim().toLowerCase();
+  if (city !== undefined && !message.toLowerCase().includes(city)) delete copy.city;
+  if (copy.city === undefined) delete copy.cityTier;
   return copy;
 }

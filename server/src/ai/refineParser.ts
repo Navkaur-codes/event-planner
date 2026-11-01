@@ -8,6 +8,7 @@ import {
   type EventInput,
   type Language,
   type PlanPatch,
+  type Priority,
 } from '@utsav/shared';
 import { en } from './fallbackContent/en.js';
 import { hi } from './fallbackContent/hi.js';
@@ -59,6 +60,10 @@ interface Phrases {
   label(constraint: Constraint): string;
   sentence(changes: string[]): string;
   focus(text: string): string;
+  priorityUp(labels: string): string;
+  priorityDown(labels: string): string;
+  category(priority: Priority): string;
+  language(language: Language): string;
 }
 
 /** Explanation wording per language; constraint names reuse the fallback labels. */
@@ -73,6 +78,10 @@ const PHRASES: Record<Language, Phrases> = {
     label: (constraint) => en.constraintLabels[constraint],
     sentence: (changes) => `I ${joinWith('and', changes)}.`,
     focus: (text) => `Kept your plan as it is and refreshed the ideas around: ${text}`,
+    priorityUp: (labels) => `gave ${labels} a bigger share of the budget`,
+    priorityDown: (labels) => `gave ${labels} a smaller share of the budget`,
+    category: (priority) => CATEGORY_NAMES.en[priority],
+    language: (language) => `switched the ideas to ${language === 'hi' ? 'Hindi' : 'English'}`,
   },
   hi: {
     budgetTo: (amount) => `बजट ${amount} कर दिया`,
@@ -84,8 +93,107 @@ const PHRASES: Record<Language, Phrases> = {
     label: (constraint) => hi.constraintLabels[constraint],
     sentence: (changes) => `मैंने ${joinWith('और', changes)}।`,
     focus: (text) => `आपकी योजना वैसी ही रखी और सुझाव इस पर केंद्रित किए: ${text}`,
+    priorityUp: (labels) => `${labels} को बजट में बड़ा हिस्सा दिया`,
+    priorityDown: (labels) => `${labels} का बजट हिस्सा घटाया`,
+    category: (priority) => CATEGORY_NAMES.hi[priority],
+    language: (language) => `सुझाव ${language === 'hi' ? 'हिंदी' : 'अंग्रेज़ी'} में कर दिए`,
   },
 };
+
+const CATEGORY_NAMES: Record<Language, Record<Priority, string>> = {
+  en: {
+    venue: 'the venue',
+    food: 'food',
+    decor: 'decor',
+    photography: 'photography',
+    entertainment: 'entertainment',
+    attire: 'attire',
+    invitations: 'invitations',
+    gifts: 'gifts',
+    logistics: 'logistics',
+  },
+  hi: {
+    venue: 'स्थल',
+    food: 'खाना',
+    decor: 'सजावट',
+    photography: 'फ़ोटोग्राफ़ी',
+    entertainment: 'मनोरंजन',
+    attire: 'कपड़े',
+    invitations: 'निमंत्रण',
+    gifts: 'उपहार',
+    logistics: 'लॉजिस्टिक्स',
+  },
+};
+
+/** Words that name a budget category, in English and Hindi. */
+const CATEGORY_KEYWORDS: readonly [Priority, RegExp][] = [
+  ['venue', /\b(venue|hall|banquet)\b|स्थल/i],
+  ['food', /\b(food|catering|caterer|menu|meals?)\b|खाना|खाने/i],
+  ['decor', /\b(decor|decorations?|flowers|lighting)\b|सजावट/i],
+  ['photography', /\b(photos?|photography|photographer|videography|video)\b|फ़ोटो|फोटो/i],
+  ['entertainment', /\b(entertainment|music|dj|band|performers?|games)\b|संगीत|मनोरंजन/i],
+  ['attire', /\b(attire|outfits?|clothes|dress(es)?|makeup)\b|कपड़/i],
+  ['invitations', /\b(invitations?|invitation cards|cards)\b|निमंत्रण/i],
+  ['gifts', /\b(gifts?|favou?rs|return gifts?)\b|उपहार|गिफ्ट/i],
+  ['logistics', /\b(logistics|transport|travel|parking)\b|ट्रांसपोर्ट/i],
+];
+const SPEND_LESS =
+  /\b(less|reduce|cut|lower|cheaper|smaller|trim|save on|minimi[sz]e|skip)\b|कम|घटा/i;
+const SPEND_MORE =
+  /\b(more|increase|extra|bigger|boost|higher|splurge|prioriti[sz]e|focus on)\b|ज़्यादा|ज्यादा|बढ़ा/i;
+/** A budget shift needs a money word, so "more colourful decor" stays a style wish. */
+const MONEY_WORDS =
+  /\b(money|budget|spend|spending|cost|costs|expenses?|cheaper|splurge|save|share)\b|पैस|बजट|खर्च/i;
+const LANGUAGE_REQUEST: readonly [Language, RegExp][] = [
+  ['hi', /\b(in|into|to)\s+hindi\b|हिंदी में|हिन्दी में/i],
+  ['en', /\b(in|into|to)\s+english\b|अंग्रेज़ी में|अंग्रेजी में/i],
+];
+
+/**
+ * "More money for photography" / "spend less on decor": the categories to boost or drop.
+ * Returns the new priority list (boosted first, at most three), or undefined if nothing changes.
+ */
+export function prioritiesFrom(input: EventInput, message: string): Priority[] | undefined {
+  if (!MONEY_WORDS.test(message)) return undefined;
+  const up: Priority[] = [];
+  const down: Priority[] = [];
+  const verbs = [
+    ...verbPositions(SPEND_LESS, message, 'down'),
+    ...verbPositions(SPEND_MORE, message, 'up'),
+  ];
+  for (const [priority, pattern] of CATEGORY_KEYWORDS) {
+    const match = pattern.exec(message);
+    if (!match) continue;
+    // The closest verb before the category wins ("more for decor, less on food"); a verb after
+    // it counts only when none comes before ("decor budget higher").
+    const before = verbs
+      .filter((verb) => verb.index < match.index && match.index - verb.index <= 30)
+      .sort((a, b) => b.index - a.index)[0];
+    const after = verbs
+      .filter((verb) => verb.index > match.index && verb.index - match.index <= 30)
+      .sort((a, b) => a.index - b.index)[0];
+    const nearest = before ?? after;
+    if (nearest?.direction === 'down') down.push(priority);
+    else if (nearest?.direction === 'up') up.push(priority);
+  }
+  if (up.length === 0 && down.length === 0) return undefined;
+  const kept = input.priorities.filter((p) => !down.includes(p) && !up.includes(p));
+  const next = [...up, ...kept].slice(0, LIMITS.maxPriorities);
+  const unchanged =
+    next.length === input.priorities.length && next.every((p, i) => p === input.priorities[i]);
+  return unchanged ? undefined : next;
+}
+
+function verbPositions(pattern: RegExp, message: string, direction: 'up' | 'down') {
+  const global = new RegExp(pattern.source, 'gi');
+  return [...message.matchAll(global)].map((match) => ({ index: match.index, direction }));
+}
+
+/** "Ideas in Hindi" / "in English": the requested idea language, if it differs. */
+export function languageFrom(input: EventInput, message: string): Language | undefined {
+  const found = LANGUAGE_REQUEST.find(([, pattern]) => pattern.test(message))?.[0];
+  return found && found !== input.language ? found : undefined;
+}
 
 /** Hindi keywords per constraint (Devanagari has no \b word boundaries in JS regex). */
 const HINDI_KEYWORDS: Partial<Record<Constraint, RegExp>> = {
@@ -157,6 +265,21 @@ export function parseRefinement(input: EventInput, message: string): Interpretat
   if (toRemove.length > 0) {
     patch.removeConstraints = toRemove;
     changes.push(say.removed(toRemove.map(say.label).join(', ')));
+  }
+
+  const priorities = prioritiesFrom(input, message);
+  if (priorities) {
+    const boosted = priorities.filter((p) => !input.priorities.includes(p));
+    const dropped = input.priorities.filter((p) => !priorities.includes(p));
+    patch.priorities = priorities;
+    if (boosted.length > 0) changes.push(say.priorityUp(boosted.map(say.category).join(', ')));
+    if (dropped.length > 0) changes.push(say.priorityDown(dropped.map(say.category).join(', ')));
+  }
+
+  const language = languageFrom(input, message);
+  if (language) {
+    patch.language = language;
+    changes.push(say.language(language));
   }
 
   if (changes.length === 0) {

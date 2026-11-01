@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { planResponse } from '../../mocks/fixtures';
 import type { LibraryEntry } from '../../state/storage';
@@ -26,8 +27,8 @@ function renderLanding(plans: LibraryEntry[] = []) {
     onDeleteSaved: vi.fn(),
     onImported: vi.fn(),
   };
-  render(<Landing {...props} />);
-  return props;
+  const { container } = render(<Landing {...props} />);
+  return { ...props, container };
 }
 
 beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
@@ -52,15 +53,21 @@ describe('Landing', () => {
 
   it('lists saved plans to open or delete, and starts each event type', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse(health));
-    vi.stubGlobal('confirm', vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true));
     const props = renderLanding([entry]);
     const yourPlans = screen.getByRole('region', { name: 'Your plans' });
     expect(within(yourPlans).getByText(/Birthday/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open plan Aarav turns 7' }));
     expect(props.onOpenSaved).toHaveBeenCalledWith(entry);
     fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    const confirm = screen.getByRole('group', { name: 'Delete plan Aarav turns 7?' });
+    expect((await axe(props.container)).violations).toEqual([]);
+    expect(document.activeElement?.textContent).toBe('Keep');
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Keep' }));
     expect(props.onDeleteSaved).not.toHaveBeenCalled();
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Delete plan Aarav turns 7');
+
     fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, delete' }));
     expect(props.onDeleteSaved).toHaveBeenCalledWith('p-1');
     fireEvent.click(screen.getByRole('button', { name: /Plan a community event/ }));
     expect(props.onStart).toHaveBeenCalledWith('community');

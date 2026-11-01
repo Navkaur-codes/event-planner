@@ -650,6 +650,14 @@ body[data-event] .bunting--rani {
   font-size: 0.95rem;
   color: var(--ink-soft);
 }
+.saved-plan__confirm p {
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+}
+.button--danger {
+  background: var(--sindoor-deep);
+  color: var(--white);
+}
 .saved-plan__actions {
   display: flex;
   align-items: center;

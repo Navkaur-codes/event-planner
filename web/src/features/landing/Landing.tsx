@@ -1,5 +1,5 @@
 import type { EventType, HealthResponse } from '@utsav/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { getHealth } from '../../api/client';
 import { EVENT_LABELS, formatDate, formatMoney } from '../../lib/labels';
 import type { LibraryEntry, SavedPlan } from '../../state/storage';
@@ -56,6 +56,17 @@ interface LandingProps {
 /** Landing page: event cards that start the wizard, the plans saved here, and the status. */
 export function Landing({ onStart, plans, onOpenSaved, onDeleteSaved, onImported }: LandingProps) {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const plansHeadingRef = useRef<HTMLHeadingElement>(null);
+  const planCount = useRef(plans.length);
+
+  // After a delete the card is gone, so move focus somewhere sensible instead of <body>.
+  useEffect(() => {
+    if (plans.length < planCount.current) {
+      (plans.length > 0 ? plansHeadingRef.current : titleRef.current)?.focus();
+    }
+    planCount.current = plans.length;
+  }, [plans.length]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +81,7 @@ export function Landing({ onStart, plans, onOpenSaved, onDeleteSaved, onImported
   return (
     <>
       <header className="hero">
-        <h1>
+        <h1 ref={titleRef} tabIndex={-1}>
           <span className="hero__mark">Utsav</span>
         </h1>
         <p>
@@ -100,7 +111,12 @@ export function Landing({ onStart, plans, onOpenSaved, onDeleteSaved, onImported
           ))}
         </ul>
         {plans.length > 0 && (
-          <SavedPlans plans={plans} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
+          <SavedPlans
+            plans={plans}
+            onOpen={onOpenSaved}
+            onDelete={onDeleteSaved}
+            headingRef={plansHeadingRef}
+          />
         )}
       </div>
 
@@ -137,52 +153,100 @@ interface SavedPlansProps {
   plans: readonly LibraryEntry[];
   onOpen: (entry: LibraryEntry) => void;
   onDelete: (id: string) => void;
+  headingRef: RefObject<HTMLHeadingElement | null>;
 }
 
 /** "Your plans": every plan saved in this browser, newest first, to reopen or delete. */
-function SavedPlans({ plans, onOpen, onDelete }: SavedPlansProps) {
+function SavedPlans({ plans, onOpen, onDelete, headingRef }: SavedPlansProps) {
   return (
     <section className="saved-plans sticker" aria-labelledby="saved-plans-title">
-      <h2 id="saved-plans-title">Your plans</h2>
+      <h2 id="saved-plans-title" ref={headingRef} tabIndex={-1}>
+        Your plans
+      </h2>
       <p className="saved-plans__lead">Saved in this browser only.</p>
       <ul>
-        {plans.map((entry) => {
-          const { input, budget } = entry.plan.response.plan;
-          return (
-            <li key={entry.id} className="saved-plan" data-event={input.eventType}>
-              <p className="saved-plan__kicker">{EVENT_LABELS[input.eventType]}</p>
-              <h3>{input.title}</h3>
-              <p className="saved-plan__meta">
-                {formatDate(input.eventDate)} · {input.city} ·{' '}
-                {formatMoney(budget.total, budget.currency)}
-              </p>
-              <div className="saved-plan__actions">
-                <button
-                  type="button"
-                  className="button button--primary"
-                  aria-label={`Open plan ${input.title}`}
-                  onClick={() => onOpen(entry)}
-                >
-                  Open
-                </button>
-                <button
-                  type="button"
-                  className="link-button"
-                  aria-label={`Delete plan ${input.title}`}
-                  onClick={() => {
-                    if (window.confirm(`Delete “${input.title}” from this browser?`)) {
-                      onDelete(entry.id);
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          );
-        })}
+        {plans.map((entry) => (
+          <SavedPlanCard key={entry.id} entry={entry} onOpen={onOpen} onDelete={onDelete} />
+        ))}
       </ul>
     </section>
+  );
+}
+
+interface SavedPlanCardProps {
+  entry: LibraryEntry;
+  onOpen: (entry: LibraryEntry) => void;
+  onDelete: (id: string) => void;
+}
+
+/** One saved plan. Deleting asks first, inline, and keeps keyboard focus in place. */
+function SavedPlanCard({ entry, onOpen, onDelete }: SavedPlanCardProps) {
+  const [confirming, setConfirming] = useState(false);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+  const { input, budget } = entry.plan.response.plan;
+
+  useEffect(() => {
+    if (confirming) keepRef.current?.focus();
+    else if (wasConfirming.current) deleteRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+
+  return (
+    <li className="saved-plan" data-event={input.eventType}>
+      <p className="saved-plan__kicker">{EVENT_LABELS[input.eventType]}</p>
+      <h3>{input.title}</h3>
+      <p className="saved-plan__meta">
+        {formatDate(input.eventDate)} · {input.city} · {formatMoney(budget.total, budget.currency)}
+      </p>
+      {confirming ? (
+        <div
+          className="saved-plan__confirm"
+          role="group"
+          aria-label={`Delete plan ${input.title}?`}
+        >
+          <p>Delete this plan from this browser?</p>
+          <div className="saved-plan__actions">
+            <button
+              type="button"
+              className="button button--danger"
+              onClick={() => onDelete(entry.id)}
+            >
+              Yes, delete
+            </button>
+            <button
+              ref={keepRef}
+              type="button"
+              className="link-button"
+              onClick={() => setConfirming(false)}
+            >
+              Keep
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="saved-plan__actions">
+          <button
+            type="button"
+            className="button button--primary"
+            aria-label={`Open plan ${input.title}`}
+            onClick={() => onOpen(entry)}
+          >
+            Open
+          </button>
+          <button
+            ref={deleteRef}
+            type="button"
+            className="link-button"
+            aria-label={`Delete plan ${input.title}`}
+            onClick={() => setConfirming(true)}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </li>
   );
 }
 

@@ -1,5 +1,6 @@
 import { BudgetCategorySchema, LIMITS, PlanResponseSchema } from '@utsav/shared';
 import { z } from 'zod';
+import { now } from '../lib/clock';
 
 /** Single-plan keys from earlier versions, read once and migrated into the library. */
 export const STORAGE_KEY = 'utsav:plan:v2';
@@ -73,17 +74,18 @@ export function loadLibrary(): LibraryEntry[] {
   }
 }
 
-/** Saves (or updates) one plan and moves it to the top; returns the new library. */
+/**
+ * Saves (or updates) one plan and moves it to the top; returns the new library. Pass the
+ * library already in memory to skip re-reading and re-validating storage on every change.
+ */
 export function saveToLibrary(
   id: string,
   plan: Omit<SavedPlan, 'version'>,
-  now: Date = new Date(),
+  at: Date = now(),
+  existing: readonly LibraryEntry[] = loadLibrary(),
 ): LibraryEntry[] {
-  const entry: LibraryEntry = { id, savedAt: now.toISOString(), plan: { version: 2, ...plan } };
-  const library = [entry, ...loadLibrary().filter((saved) => saved.id !== id)].slice(
-    0,
-    MAX_SAVED_PLANS,
-  );
+  const entry: LibraryEntry = { id, savedAt: at.toISOString(), plan: { version: 2, ...plan } };
+  const library = [entry, ...existing.filter((saved) => saved.id !== id)].slice(0, MAX_SAVED_PLANS);
   writeLibrary(library);
   return library;
 }
@@ -107,11 +109,21 @@ function writeLibrary(library: LibraryEntry[]): void {
 function migrateSinglePlan(): LibraryEntry[] {
   const raw =
     window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
-  const plan = raw ? parseSavedPlan(JSON.parse(raw)) : null;
-  if (!plan) return [];
-  const library: LibraryEntry[] = [{ id: newPlanId(), savedAt: new Date().toISOString(), plan }];
-  writeLibrary(library);
+  if (raw === null) return [];
+  // Old keys are read once: a valid plan moves into the library, an unreadable one is dropped.
   window.localStorage.removeItem(STORAGE_KEY);
   window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  const plan = parseSavedPlan(parseJson(raw));
+  if (!plan) return [];
+  const library: LibraryEntry[] = [{ id: newPlanId(), savedAt: now().toISOString(), plan }];
+  writeLibrary(library);
   return library;
+}
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }

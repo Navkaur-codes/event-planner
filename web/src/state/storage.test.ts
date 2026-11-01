@@ -69,6 +69,18 @@ describe('plan library', () => {
     expect(loadLibrary()[0]?.plan).toEqual(saved);
   });
 
+  it('drops an unreadable old save once instead of re-reading it on every load', () => {
+    window.localStorage.setItem(STORAGE_KEY, '{not json');
+    expect(loadLibrary()).toEqual([]);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('can save against the library already in memory', () => {
+    const inMemory = saveToLibrary('a', plan);
+    const next = saveToLibrary('b', plan, new Date('2026-11-01T12:00:00Z'), inMemory);
+    expect(next.map((entry) => entry.id)).toEqual(['b', 'a']);
+  });
+
   it('drops tampered entries and ignores corrupt JSON', () => {
     const broken = structuredClone(planResponse);
     broken.plan.budget.total += 1; // lines no longer add up

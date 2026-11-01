@@ -15,6 +15,7 @@ const base: PlanState = {
   planId: 1,
   activeId: 'p-1',
   library: [],
+  unsaved: false,
 };
 
 /** The fixture with the budget cut to 48,000 (food and venue lower) and one checklist item new. */
@@ -154,6 +155,44 @@ describe('planReducer navigation', () => {
     });
   });
 
+  it('updates the same saved plan when regenerated from "Edit details"', () => {
+    const editing = planReducer(base, { type: 'edit' });
+    const regenerated = planReducer(editing, {
+      type: 'planReady',
+      response: planResponse,
+      id: 'p-new',
+    });
+    expect(regenerated).toMatchObject({ activeId: 'p-1', draftSource: null, unsaved: true });
+
+    const fresh = planReducer(
+      { ...base, draftSource: null },
+      {
+        type: 'planReady',
+        response: planResponse,
+        id: 'p-new',
+      },
+    );
+    expect(fresh.activeId).toBe('p-new');
+  });
+
+  it('only marks real changes for saving, not opening a plan', () => {
+    const entry = {
+      id: 'p-2',
+      savedAt: '2026-11-01T10:00:00.000Z',
+      plan: { version: 2 as const, response: planResponse, celebrated: true, actuals: {} },
+    };
+    expect(planReducer({ ...base, unsaved: true }, { type: 'openSaved', entry }).unsaved).toBe(
+      false,
+    );
+    expect(planReducer(base, { type: 'toggleItem', id: 'c-cake' }).unsaved).toBe(true);
+    expect(planReducer(base, { type: 'setActual', category: 'food', amount: 5 }).unsaved).toBe(
+      true,
+    );
+    expect(
+      planReducer({ ...base, unsaved: true }, { type: 'libraryChanged', library: [entry] }).unsaved,
+    ).toBe(false);
+  });
+
   it('closes the open plan when it is deleted, but not when another one is', () => {
     const entry = {
       id: 'p-1',
@@ -164,7 +203,14 @@ describe('planReducer navigation', () => {
     expect(kept).toMatchObject({ response: planResponse, activeId: 'p-1', library: [entry] });
 
     const gone = planReducer(base, { type: 'libraryChanged', library: [] });
-    expect(gone).toMatchObject({ response: null, activeId: null, view: 'landing', library: [] });
+    expect(gone).toMatchObject({
+      response: null,
+      activeId: null,
+      lastRefine: null,
+      draftSource: null,
+      view: 'landing',
+      library: [],
+    });
   });
 
   it('marks the celebration as played', () => {

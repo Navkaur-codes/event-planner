@@ -1,6 +1,7 @@
 import type { BudgetCategory, EventInput, EventType, PlanResponse } from '@utsav/shared';
 import { useEffect, useReducer } from 'react';
 import { diffBudget, type BudgetChanges } from '../lib/budgetDiff';
+import { now } from '../lib/clock';
 import {
   loadLibrary,
   saveToLibrary,
@@ -35,6 +36,8 @@ export interface PlanState {
   activeId: string | null;
   /** Plans saved in this browser, newest first (shown on the landing page). */
   library: LibraryEntry[];
+  /** True when the plan on screen has changes the library does not have yet. */
+  unsaved: boolean;
 }
 
 export type PlanAction =
@@ -72,7 +75,10 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
         actuals: {},
         lastRefine: null,
         planId: state.planId + 1,
-        activeId: action.id,
+        // Regenerating from "Edit details" updates that saved plan instead of adding a copy.
+        activeId: state.draftSource && state.activeId ? state.activeId : action.id,
+        draftSource: null,
+        unsaved: true,
       };
     case 'refined':
       if (!state.response) return state;
@@ -83,6 +89,7 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
           explanation: action.explanation,
           changes: diffBudget(state.response.plan.budget, action.response.plan.budget),
         },
+        unsaved: true,
       };
     case 'imported':
       return {
@@ -95,20 +102,21 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
         lastRefine: null,
         planId: state.planId + 1,
         activeId: action.id,
+        unsaved: true,
       };
     case 'toggleItem':
       return state.response
-        ? { ...state, response: toggleChecklistItem(state.response, action.id) }
+        ? { ...state, response: toggleChecklistItem(state.response, action.id), unsaved: true }
         : state;
     case 'setActual': {
       const actuals: Actuals = Object.fromEntries(
         Object.entries(state.actuals).filter(([category]) => category !== action.category),
       );
       if (action.amount !== null) actuals[action.category] = action.amount;
-      return { ...state, actuals };
+      return { ...state, actuals, unsaved: true };
     }
     case 'celebrated':
-      return { ...state, celebrated: true };
+      return { ...state, celebrated: true, unsaved: true };
     case 'openSaved':
       return {
         ...state,
@@ -118,25 +126,30 @@ export function planReducer(state: PlanState, action: PlanAction): PlanState {
         celebrated: action.entry.plan.celebrated,
         actuals: action.entry.plan.actuals,
         lastRefine: null,
+        draftSource: null,
         planId: state.planId + 1,
         activeId: action.entry.id,
+        unsaved: false,
       };
     case 'libraryChanged': {
       // Deleting the plan that is open leaves nothing to show or save.
       const stillThere = action.library.some((entry) => entry.id === state.activeId);
       return stillThere || state.activeId === null
-        ? { ...state, library: action.library }
+        ? { ...state, library: action.library, unsaved: false }
         : {
             ...state,
             library: action.library,
+            unsaved: false,
             response: null,
             activeId: null,
+            lastRefine: null,
+            draftSource: null,
             view: 'landing',
             eventType: null,
           };
     }
     case 'home':
-      return { ...state, view: 'landing', eventType: null };
+      return { ...state, view: 'landing', eventType: null, draftSource: null };
   }
 }
 
@@ -167,22 +180,22 @@ function initialState(): PlanState {
     planId: 0,
     activeId: null,
     library: loadLibrary(),
+    unsaved: false,
   };
 }
 
-/** App state; the plan on screen (ticks and tracker included) is saved to the library. */
+/** App state; changes to the plan on screen (ticks and tracker included) go to the library. */
 export function usePlanStore() {
   const [state, dispatch] = useReducer(planReducer, undefined, initialState);
-  const { response, celebrated, actuals, activeId } = state;
+  const { response, celebrated, actuals, activeId, unsaved, library } = state;
 
   useEffect(() => {
-    if (response && activeId) {
-      dispatch({
-        type: 'libraryChanged',
-        library: saveToLibrary(activeId, { response, celebrated, actuals }),
-      });
-    }
-  }, [response, celebrated, actuals, activeId]);
+    if (!unsaved || !response || !activeId) return;
+    dispatch({
+      type: 'libraryChanged',
+      library: saveToLibrary(activeId, { response, celebrated, actuals }, now(), library),
+    });
+  }, [unsaved, response, celebrated, actuals, activeId, library]);
 
   return [state, dispatch] as const;
 }

@@ -141,18 +141,33 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: 'Your plans' })).toBeNull();
   });
 
-  it('deletes a saved plan from the main page after confirming', () => {
+  it('deletes a saved plan from the main page after an inline confirmation', () => {
     stubApi();
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    );
     saveToLibrary('p-1', { response: planResponse, celebrated: true, actuals: {} });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
-    expect(window.confirm).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, delete' }));
     expect(screen.queryByRole('region', { name: 'Your plans' })).toBeNull();
     expect(loadLibrary()).toEqual([]);
+    // The card is gone, so focus lands on the page title rather than being lost.
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Utsav' }));
+  });
+
+  it('keeps focus in "Your plans" when one of several plans is deleted', () => {
+    stubApi();
+    const other = {
+      ...planResponse,
+      plan: { ...planResponse.plan, input: { ...planRequest, title: 'Diwali mela' } },
+    };
+    saveToLibrary('p-1', { response: planResponse, celebrated: true, actuals: {} });
+    saveToLibrary('p-2', { response: other, celebrated: true, actuals: {} });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete plan Aarav turns 7' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, delete' }));
+    expect(loadLibrary().map((entry) => entry.id)).toEqual(['p-2']);
+    expect(document.activeElement).toBe(
+      screen.getByRole('heading', { level: 2, name: 'Your plans' }),
+    );
   });
 
   it('refines the plan in place from a suggestion chip, without a reload', async () => {

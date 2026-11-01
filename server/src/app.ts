@@ -68,6 +68,10 @@ function serveWebApp(app: Express, webDist: string): void {
       },
     }),
   );
+  // A missing build file must not be answered with the HTML shell.
+  app.use('/assets', (_req, res) => {
+    res.status(404).end();
+  });
   // Single-page app: every other GET returns index.html.
   app.get(/^(?!\/api).*/, (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');

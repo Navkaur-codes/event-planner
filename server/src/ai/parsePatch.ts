@@ -57,7 +57,10 @@ function keepStatedNumbers(patch: PlanPatch, input: EventInput, message: string)
   ) {
     delete copy.guestCount;
   }
-  // A date needs at least a day number in the request ("move it to 14 Feb").
-  if (copy.eventDate !== undefined && stated.size === 0) delete copy.eventDate;
+  // A date is kept only when its day of the month was said ("move it to 14 Feb"), so the
+  // model can never pick a date the host did not ask for.
+  if (copy.eventDate !== undefined && !stated.has(Number(copy.eventDate.slice(8, 10)))) {
+    delete copy.eventDate;
+  }
   return copy;
 }

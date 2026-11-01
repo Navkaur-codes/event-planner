@@ -136,6 +136,8 @@ export function createAiService({
           apiKey,
           options.signal,
         );
+        // isUsable only decides whether to retry on the fallback model; parsing again here is a
+        // few microseconds and keeps the client free of parse state.
         const parsed = parseIdeas(completion.content);
         if (!parsed.ok) return fallback({ reason: `invalid_output:${parsed.failure}` });
         cache.set(key, parsed.ideas);

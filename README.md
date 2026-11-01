@@ -2,8 +2,8 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. English and Hindi. 435 automated tests in CI.
-> **Live demo:** https://utsav-event-planner-1xh3.onrender.com · **Demo video:** _link added at submission_
+> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 438 automated tests in CI.
+> **Live demo:** https://utsav-event-planner-1xh3.onrender.com
 
 ---
 
@@ -87,19 +87,21 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - Automated `jest-axe` checks on every screen; Hindi output for Hindi-speaking hosts.
 
 ## Testing
-**435 automated tests** (Vitest), run with coverage in GitHub Actions on every push, plus lint, format, type-check, build and a secret scan.
+**438 automated tests** (Vitest), run with coverage in GitHub Actions on every push, plus lint, format, type-check, build and a secret scan.
 
 | Area | Tests | What they prove |
 |---|---|---|
 | Engine (`shared`) | 213 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
-| API + AI (`server`) | 162 · 96% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
-| Web (`web`) | 60 · 92% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
+| API + AI (`server`) | 164 · 95% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
+| Web (`web`) | 61 · 91% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
 
 ## Assumptions
 - Users plan one event at a time and keep their data in their own browser; no accounts are needed.
 - Budgets are whole currency units; INR is the default, with USD/EUR/GBP supported via a simple static conversion for warnings.
 - Budget splits and per-guest thresholds are reasonable planning defaults, not market quotes; the assistant suggests vendor *types* and questions, not specific businesses or prices.
 - The free Groq tier may rate-limit; the app stays fully usable through the deterministic fallback.
+- Hindi applies to the AI-written content (ideas and refine explanations, marked `lang="hi"` for screen readers); the interface labels, checklist and engine warnings are in English.
+- Dates are planned from the visitor's local calendar day; the engine works in whole days, so time zones never shift a due date.
 
 ## Project structure
 ```

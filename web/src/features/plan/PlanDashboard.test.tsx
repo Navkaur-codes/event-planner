@@ -86,6 +86,23 @@ describe('PlanDashboard', () => {
     expect((await axe(container)).violations).toEqual([]);
   });
 
+  it('marks Hindi ideas with lang="hi" and stays accessible', async () => {
+    const hindi = {
+      ...fallbackPlanResponse,
+      plan: {
+        ...fallbackPlanResponse.plan,
+        input: { ...fallbackPlanResponse.plan.input, language: 'hi' as const },
+      },
+      ideas: { ...fallbackPlanResponse.ideas, summary: 'आपके उत्सव के लिए कुछ विचार' },
+    };
+    const { container } = renderDashboard(hindi);
+    expect(screen.getByText('आपके उत्सव के लिए कुछ विचार').getAttribute('lang')).toBe('hi');
+    expect(
+      screen.getByRole('heading', { name: 'Ideas for you' }).closest('[lang="hi"]'),
+    ).toBeNull();
+    expect((await axe(container)).violations).toEqual([]);
+  });
+
   it('flags over-budget lines with an icon and words, and reports valid amounts', () => {
     const { onActualChange } = renderDashboard(planResponse, true, { venue: 16000, food: 10000 });
     const tracker = screen.getByRole('table', { name: /Planned and actual spend/ });

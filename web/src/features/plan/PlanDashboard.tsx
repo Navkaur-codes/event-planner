@@ -1,5 +1,5 @@
 import type { BudgetCategory, PlanResponse, RefineResponse } from '@utsav/shared';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { daysBetween, todayIso } from '../../lib/clock';
 import { CITY_TIER_LABELS, EVENT_LABELS, formatDate, formatMoney } from '../../lib/labels';
 import { celebrate, revealPlan } from '../../motion';
@@ -80,7 +80,10 @@ export default function PlanDashboard({
     return justFinished ? celebrate() : undefined;
   }, [allDone]);
 
-  const saved: SavedPlan = { version: 2, response, celebrated: true, actuals };
+  const saved = useMemo<SavedPlan>(
+    () => ({ version: 2, response, celebrated: true, actuals }),
+    [response, actuals],
+  );
 
   return (
     <div className="dashboard" ref={rootRef}>
@@ -154,7 +157,7 @@ export default function PlanDashboard({
         />
         <TimelinePanel timeline={plan.timeline} today={today} />
         <ChecklistPanel items={plan.checklist} onToggle={onToggleItem} />
-        <IdeasPanel ideas={ideas} aiStatus={aiStatus} />
+        <IdeasPanel ideas={ideas} aiStatus={aiStatus} lang={input.language} />
       </div>
     </div>
   );

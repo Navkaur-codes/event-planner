@@ -2,6 +2,7 @@
 
 > Loaded on **every prompt** in this project. These rules do **not** change between phases.
 > Phase-specific instructions live in `D:/event-planner/docs/claude-progressive.md`; full plan in `D:/event-planner/docs/PLAN.md`. The `docs/` folder is **local only** (gitignored) — see §2.7a.
+> **For readers of the public repo:** `docs/…` paths below refer to the team's local planning notes used while building with parallel AI sessions; they are intentionally not published. Everything needed to understand the product is in `README.md`, `shared/src/engine/README.md` and `server/src/ai/README.md`.
 
 ## 1. Mission
 - Build a GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
@@ -100,7 +101,7 @@ Raise it yourself after the feature freeze, for edits outside your paths, and fo
 - **Banned:** default Tailwind/Bootstrap palettes, purple-blue "AI" gradients, glassmorphism, grey corporate dashboards, emoji spam, chatbot-only UI, animation on every element, pie/donut/3D charts, colour-only status.
 
 ## 8. Stack, commands, env names
-- **Stack:** TypeScript (strict) · Node 24 · Express · Zod · helmet · express-rate-limit · compression · Groq SDK (`groq-sdk`) · Vite + React 18 · GSAP · Vitest · Supertest · React Testing Library · jest-axe · ESLint + Prettier · GitHub Actions.
+- **Stack:** TypeScript (strict) · Node 24 · Express · Zod · helmet · express-rate-limit · compression · Groq SDK (`groq-sdk`) · Vite + React 19 · GSAP · Vitest · Supertest · React Testing Library · jest-axe · ESLint + Prettier · GitHub Actions.
 - **Commands (repo root):** `npm install` · `npm run dev` (server + web) · `npm run build` · `npm start` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run secret-scan`.
 - **Env var names:** `GROQ_API_KEY` (secret) · `GROQ_MODEL` · `GROQ_FALLBACK_MODEL` · `PORT` · `NODE_ENV` · `RATE_LIMIT_PER_MIN` · `AI_TIMEOUT_MS`.
 - **Hosting:** Render free web service from `render.yaml` (`GROQ_API_KEY` set with `sync: false` in the dashboard).

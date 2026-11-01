@@ -88,10 +88,17 @@ export function evaluateWarnings(ctx: WarningContext): Warning[] {
   });
 }
 
+const moneyFormats = new Map<Currency, Intl.NumberFormat>();
+
 function formatMoney(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Math.round(amount));
+  let format = moneyFormats.get(currency);
+  if (!format) {
+    format = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    });
+    moneyFormats.set(currency, format);
+  }
+  return format.format(Math.round(amount));
 }

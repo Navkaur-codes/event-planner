@@ -83,22 +83,32 @@ export const ITEM_PRIORITY_LABELS: Record<ItemPriority, string> = {
   nice: 'Nice to have',
 };
 
+// Intl formatters are costly to build and formatMoney runs per line, per render and per
+// count-up frame, so each one is created once and reused.
+const moneyFormats = new Map<Currency, Intl.NumberFormat>();
+const longDate = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 /** Formats whole currency units with the right symbol and grouping (e.g. ₹60,000). */
 export function formatMoney(amount: number, currency: Currency): string {
-  return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-GB', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  let format = moneyFormats.get(currency);
+  if (!format) {
+    format = new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-GB', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    });
+    moneyFormats.set(currency, format);
+  }
+  return format.format(amount);
 }
 
 /** Formats an ISO date as a friendly long date, e.g. "Sun, 20 Dec 2026". */
 export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${iso}T00:00:00Z`));
+  return longDate.format(new Date(`${iso}T00:00:00Z`));
 }

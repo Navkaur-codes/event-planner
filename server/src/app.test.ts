@@ -127,4 +127,13 @@ describe('static web app', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('<title>Utsav</title>');
   });
+
+  it('answers a missing build asset with 404, not the HTML shell', async () => {
+    const dist = mkdtempSync(join(tmpdir(), 'utsav-web-'));
+    mkdirSync(join(dist, 'assets'));
+    writeFileSync(join(dist, 'index.html'), '<!doctype html><title>Utsav</title>');
+    const res = await request(makeApp({}, dist)).get('/assets/missing-abc123.js');
+    expect(res.status).toBe(404);
+    expect(res.text).not.toContain('<title>');
+  });
 });

@@ -122,7 +122,7 @@ export function RefineBox({ input, explanation, onRefined }: RefineBoxProps) {
         {!loading && state.status !== 'error' && explanation && (
           <>
             <span aria-hidden="true">✓ </span>
-            <strong>Updated:</strong> {explanation}
+            <strong>Updated:</strong> <span lang={input.language}>{explanation}</span>
           </>
         )}
       </p>

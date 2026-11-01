@@ -126,6 +126,15 @@ describe('parsePatch', () => {
       failure: 'unstated_numbers',
     });
   });
+
+  it('drops a date the host never mentioned, even when other numbers were stated', () => {
+    const raw = JSON.stringify({
+      patch: { guestCount: birthdayInput.guestCount + 50, eventDate: '2099-12-27' },
+      explanation: 'Added guests.',
+    });
+    const result = parsePatch(raw, birthdayInput, 'add 50 guests');
+    expect(result.ok && result.value.patch).toEqual({ guestCount: birthdayInput.guestCount + 50 });
+  });
 });
 
 describe('refine and focus prompts', () => {

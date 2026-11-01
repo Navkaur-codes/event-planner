@@ -26,7 +26,10 @@ export function WhatIfPanel({ input, current }: { input: EventInput; current: Bu
     () => recalculateBudget(input, { guestCount: guests, budget }),
     [input, guests, budget],
   );
-  const planned = new Map(current.lines.map((line) => [line.category, line.amount]));
+  const planned = useMemo(
+    () => new Map(current.lines.map((line) => [line.category, line.amount])),
+    [current],
+  );
 
   const totalRef = useRef<HTMLSpanElement>(null);
   const shownTotal = useRef(preview.total);

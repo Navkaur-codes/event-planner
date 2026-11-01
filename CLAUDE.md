@@ -1,8 +1,9 @@
 # CLAUDE.md: Utsav — Celebration & Event Planner (permanent rules)
 
+> 📌 **For readers of the public repo:** this file is the build rulebook for the AI coding sessions that made Utsav. The `docs/…` paths below are the team's local planning notes and are intentionally not published. Everything needed to understand the product is in `README.md`, `shared/src/engine/README.md` and `server/src/ai/README.md`.
+
 > Loaded on **every prompt** in this project. These rules do **not** change between phases.
 > Phase-specific instructions live in `D:/event-planner/docs/claude-progressive.md`; full plan in `D:/event-planner/docs/PLAN.md`. The `docs/` folder is **local only** (gitignored) — see §2.7a.
-> **For readers of the public repo:** `docs/…` paths below refer to the team's local planning notes used while building with parallel AI sessions; they are intentionally not published. Everything needed to understand the product is in `README.md`, `shared/src/engine/README.md` and `server/src/ai/README.md`.
 
 ## 1. Mission
 - Build a GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.

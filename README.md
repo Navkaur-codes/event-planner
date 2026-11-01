@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 457 automated tests in CI.
+> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 466 automated tests in CI.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com
 
 ---
@@ -71,7 +71,7 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 ## Security
 - The Groq API key lives only in server environment variables (local `.env`, Render dashboard); it is never sent to the browser, logged or committed.
 - All inputs and AI outputs are validated with strict schemas; user text is length-limited and treated as data in prompts.
-- Helmet security headers and a same-origin CSP (no third-party scripts, styles or fonts); per-IP **and** global rate limits (the global cap protects the free AI quota even from many IPs); 10 kB request-body limit; `Cache-Control: no-store` on every API answer; generic error messages.
+- Helmet security headers and a same-origin CSP (no third-party scripts, styles or fonts); per-IP **and** global rate limits (the global cap protects the free AI quota even from many IPs); 10 kB request-body limit; `Cache-Control: no-store` on every API answer; a `Permissions-Policy` that turns off camera, microphone and location; generic error messages.
 - CI secret scan fails the build if a key-like value is in any tracked file, in the built web app, or anywhere in the git history.
 - Refine requests become a strict, schema-validated patch; injection attempts ("ignore previous instructions…") are refused, and this is tested.
 - Plans use the visitor's local date, accepted only within one day of server time, so nobody can plan "in the past".
@@ -84,16 +84,16 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - Status is never colour-only (icons + text such as "▼ Down ₹4,505", "Over by ₹6,984").
 - WCAG AA contrast on every text/background pair (measured values documented in `web/src/styles/tokens.css`).
 - All GSAP motion runs inside `gsap.matchMedia()` and is off for `prefers-reduced-motion`; layouts work from 320 px.
-- Automated `jest-axe` checks on every screen; Hindi output for Hindi-speaking hosts.
+- Automated `jest-axe` checks on every screen, including loading, error and refine-failure states; Hindi output for Hindi-speaking hosts.
 
 ## Testing
-**457 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
+**466 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
 
 | Area | Tests | What they prove |
 |---|---|---|
 | Engine (`shared`) | 213 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
 | API + AI (`server`) | 166 · 95% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
-| Web (`web`) | 78 · 92% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
+| Web (`web`) | 87 · 93% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
 
 ## Assumptions
 - Users plan one event at a time and keep their data in their own browser; no accounts are needed.

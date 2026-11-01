@@ -1,7 +1,7 @@
+import type { RequestHandler } from 'express';
 import helmet from 'helmet';
 
-/** Security headers with a strict Content-Security-Policy: every asset is same-origin. */
-export const securityHeaders = helmet({
+const helmetHeaders = helmet({
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {
@@ -19,3 +19,15 @@ export const securityHeaders = helmet({
   },
   crossOriginEmbedderPolicy: false,
 });
+
+/** The planner needs no device features, so the page and anything it embeds may use none. */
+const permissionsPolicy: RequestHandler = (_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  );
+  next();
+};
+
+/** Security headers with a strict Content-Security-Policy: every asset is same-origin. */
+export const securityHeaders = [helmetHeaders, permissionsPolicy];

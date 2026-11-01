@@ -13,12 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, so the secret scan below covers every commit
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
       - run: npm run secret-scan
+      - name: No API key anywhere in git history
+        run: "! git log --all -p | grep -E 'gsk_[A-Za-z0-9]{20,}'"
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck

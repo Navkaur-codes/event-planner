@@ -20,6 +20,7 @@ const EnvSchema = z.object({
   GROQ_FALLBACK_MODEL: optional(z.string().trim().min(1)),
   AI_TIMEOUT_MS: optional(z.coerce.number().int().min(1_000).max(60_000)),
   RATE_LIMIT_PER_MIN: optional(z.coerce.number().int().min(1).max(1_000)),
+  GLOBAL_RATE_LIMIT_PER_MIN: optional(z.coerce.number().int().min(1).max(10_000)),
 });
 
 export interface AppConfig {
@@ -30,6 +31,7 @@ export interface AppConfig {
   readonly groqFallbackModel: string;
   readonly aiTimeoutMs: number;
   readonly rateLimitPerMin: number;
+  readonly globalRateLimitPerMin: number;
 }
 
 /**
@@ -52,6 +54,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     groqFallbackModel: values.GROQ_FALLBACK_MODEL ?? 'openai/gpt-oss-20b',
     aiTimeoutMs: values.AI_TIMEOUT_MS ?? 15_000,
     rateLimitPerMin: values.RATE_LIMIT_PER_MIN ?? 20,
+    globalRateLimitPerMin: values.GLOBAL_RATE_LIMIT_PER_MIN ?? 60,
   };
   if (config.env === 'production' && !config.groqApiKey) {
     throw new Error('GROQ_API_KEY is required in production');

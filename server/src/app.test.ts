@@ -100,6 +100,25 @@ describe('API error handling', () => {
     expect(res.status).toBe(429);
     expect(ApiErrorSchema.parse(res.body).error.code).toBe('RATE_LIMITED');
   });
+
+  it('caps API calls across all clients, even from different IPs', async () => {
+    const app = makeApp({ GLOBAL_RATE_LIMIT_PER_MIN: '2' });
+    await request(app).post('/api/plan').set('X-Forwarded-For', '203.0.113.1').send(input);
+    await request(app).post('/api/plan').set('X-Forwarded-For', '203.0.113.2').send(input);
+    const res = await request(app)
+      .post('/api/plan')
+      .set('X-Forwarded-For', '203.0.113.3')
+      .send(input);
+    expect(res.status).toBe(429);
+    expect(ApiErrorSchema.parse(res.body).error.message).toMatch(/very busy/);
+  });
+
+  it('tells browsers and proxies never to cache API answers', async () => {
+    const health = await request(makeApp()).get('/api/health');
+    const plan = await request(makeApp()).post('/api/plan').send(input);
+    expect(health.headers['cache-control']).toBe('no-store');
+    expect(plan.headers['cache-control']).toBe('no-store');
+  });
 });
 
 describe('plan and refine routes (through ports)', () => {

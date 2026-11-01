@@ -11,7 +11,7 @@ import express, { type Express } from 'express';
 import { APP_VERSION, isAiConfigured, type AppConfig } from './config.js';
 import type { Logger } from './logger.js';
 import { apiNotFound, errorHandler } from './middleware/errors.js';
-import { apiRateLimit } from './middleware/rateLimit.js';
+import { apiGlobalRateLimit, apiRateLimit } from './middleware/rateLimit.js';
 import { securityHeaders } from './middleware/security.js';
 import { portStatus } from './ports.js';
 import { apiRouter } from './routes/index.js';
@@ -36,6 +36,12 @@ export function createApp({
   app.use(securityHeaders);
   app.use(compression());
 
+  // API answers are personal and change per request; no browser or proxy may cache them.
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     const body: HealthResponse = {
       status: 'ok',
@@ -46,7 +52,13 @@ export function createApp({
     res.json(body);
   });
 
-  app.use('/api', apiRateLimit(config.rateLimitPerMin), express.json({ limit: '10kb' }), apiRouter);
+  app.use(
+    '/api',
+    apiRateLimit(config.rateLimitPerMin),
+    apiGlobalRateLimit(config.globalRateLimitPerMin),
+    express.json({ limit: '10kb' }),
+    apiRouter,
+  );
   app.use('/api', apiNotFound);
 
   if (existsSync(webDist)) serveWebApp(app, webDist);

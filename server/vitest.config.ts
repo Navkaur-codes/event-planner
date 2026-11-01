@@ -14,6 +14,8 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}'],
       reporter: ['text-summary'],
+      // CI fails if the API or AI layer loses test coverage.
+      thresholds: { lines: 90, functions: 85, branches: 85 },
     },
   },
 });

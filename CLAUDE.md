@@ -103,7 +103,7 @@ Raise it yourself after the feature freeze, for edits outside your paths, and fo
 ## 8. Stack, commands, env names
 - **Stack:** TypeScript (strict) · Node 24 · Express · Zod · helmet · express-rate-limit · compression · Groq SDK (`groq-sdk`) · Vite + React 19 · GSAP · Vitest · Supertest · React Testing Library · jest-axe · ESLint + Prettier · GitHub Actions.
 - **Commands (repo root):** `npm install` · `npm run dev` (server + web) · `npm run build` · `npm start` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run secret-scan`.
-- **Env var names:** `GROQ_API_KEY` (secret) · `GROQ_MODEL` · `GROQ_FALLBACK_MODEL` · `PORT` · `NODE_ENV` · `RATE_LIMIT_PER_MIN` · `AI_TIMEOUT_MS`.
+- **Env var names:** `GROQ_API_KEY` (secret) · `GROQ_MODEL` · `GROQ_FALLBACK_MODEL` · `PORT` · `NODE_ENV` · `RATE_LIMIT_PER_MIN` · `GLOBAL_RATE_LIMIT_PER_MIN` · `AI_TIMEOUT_MS`.
 - **Hosting:** Render free web service from `render.yaml` (`GROQ_API_KEY` set with `sync: false` in the dashboard).
 
 ## 9. Code conventions

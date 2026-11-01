@@ -2,7 +2,7 @@
 
 A GenAI-powered planning assistant that helps people organize **weddings, birthdays and community events** with **budgets, timelines, vendor checklists and personalized ideas**.
 
-> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 438 automated tests in CI.
+> **Status:** ✅ v1.0 — complete and live: plan → refine in plain words → what-if → track → export. AI ideas in English or Hindi. 457 automated tests in CI.
 > **Live demo:** https://utsav-event-planner-1xh3.onrender.com
 
 ---
@@ -71,8 +71,8 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 ## Security
 - The Groq API key lives only in server environment variables (local `.env`, Render dashboard); it is never sent to the browser, logged or committed.
 - All inputs and AI outputs are validated with strict schemas; user text is length-limited and treated as data in prompts.
-- Helmet security headers and CSP, rate limiting, small request-body limits, generic error messages.
-- CI secret scan fails the build if a key-like value is ever committed.
+- Helmet security headers and a same-origin CSP (no third-party scripts, styles or fonts); per-IP **and** global rate limits (the global cap protects the free AI quota even from many IPs); 10 kB request-body limit; `Cache-Control: no-store` on every API answer; generic error messages.
+- CI secret scan fails the build if a key-like value is in any tracked file, in the built web app, or anywhere in the git history.
 - Refine requests become a strict, schema-validated patch; injection attempts ("ignore previous instructions…") are refused, and this is tested.
 - Plans use the visitor's local date, accepted only within one day of server time, so nobody can plan "in the past".
 - Imported plan files are schema-validated; a tampered file is rejected without changing anything.
@@ -87,13 +87,13 @@ Plan dashboard ──► refine · track actual spend · tick checklist · expor
 - Automated `jest-axe` checks on every screen; Hindi output for Hindi-speaking hosts.
 
 ## Testing
-**438 automated tests** (Vitest), run with coverage in GitHub Actions on every push, plus lint, format, type-check, build and a secret scan.
+**457 automated tests** (Vitest), run in GitHub Actions on every push with **coverage thresholds that fail the build** if coverage drops, plus lint, format, type-check, build and secret scans.
 
 | Area | Tests | What they prove |
 |---|---|---|
 | Engine (`shared`) | 213 · 100% lines | Every event type × city tier × guest size × budget: lines sum exactly to the total, one 10% contingency, timeline sorted within [today, event date], compression only when needed, checklist rules, refine maths, `.ics` (RFC 5545) output, speed of what-if recalculation |
-| API + AI (`server`) | 164 · 95% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
-| Web (`web`) | 61 · 91% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
+| API + AI (`server`) | 166 · 95% lines | Groq always mocked: success, bad JSON, schema-invalid, truncation, timeout, 429 → fallback; cache; refine parser (English + Hindi); prompt injection in every free-text field; validation (400/413/404/429), security headers |
+| Web (`web`) | 78 · 92% lines | Wizard validation and submit, dashboard, refine, tracker, import of tampered files, what-if sliders, local-date requests, `jest-axe` accessibility on every screen |
 
 ## Assumptions
 - Users plan one event at a time and keep their data in their own browser; no accounts are needed.
@@ -127,5 +127,13 @@ Production: `npm run build && npm start` (requires `GROQ_API_KEY`; set `NODE_ENV
 ## Deploy (free)
 Render reads `render.yaml`: one free web service, build `npm ci --include=dev && npm run build`, start `npm start`, health check `/api/health`. Set `GROQ_API_KEY` in the Render dashboard (it is never stored in the repo).
 
+## Efficiency
+- The engine is pure and runs in the browser too, so what-if sliders recalculate instantly with no network call.
+- First load is about 106 kB gzip: a long-cached library chunk plus about 12 kB of app code; the dashboard and GSAP are lazy-loaded and prefetched while the wizard is open; fonts are self-hosted Latin subsets.
+- The server compresses responses, caches hashed assets for a year, caches AI ideas (LRU + TTL), cancels AI calls when the visitor disconnects, and gives each request one AI time budget.
+
 ## Tech stack (all free)
 TypeScript · React · Vite · GSAP · Fontsource (self-hosted fonts) · Node.js · Express · Helmet · Zod · Groq API · Vitest · Testing Library · jest-axe · ESLint · Prettier · GitHub Actions · Render
+
+## License
+[MIT](LICENSE)

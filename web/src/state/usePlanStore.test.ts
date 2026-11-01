@@ -93,3 +93,44 @@ describe('planReducer', () => {
     expect(imported).toMatchObject({ actuals: { venue: 5 }, celebrated: true, planId: 2 });
   });
 });
+
+describe('planReducer without a plan', () => {
+  const empty: PlanState = { ...base, view: 'landing', eventType: null, response: null };
+
+  it('ignores plan-only actions until a plan exists', () => {
+    expect(planReducer(empty, { type: 'edit' })).toBe(empty);
+    expect(planReducer(empty, { type: 'openPlan' })).toBe(empty);
+    expect(planReducer(empty, { type: 'toggleItem', id: 'c-cake' })).toBe(empty);
+    expect(planReducer(empty, { type: 'refined', response: refined, explanation: 'Cut 20%' })).toBe(
+      empty,
+    );
+  });
+
+  it('starts the wizard blank and switches the theme as the type changes', () => {
+    const started = planReducer(empty, { type: 'start', eventType: 'wedding' });
+    expect(started).toMatchObject({ view: 'wizard', eventType: 'wedding', draftSource: null });
+    const switched = planReducer(started, { type: 'setEventType', eventType: 'community' });
+    expect(switched.eventType).toBe('community');
+  });
+});
+
+describe('planReducer navigation', () => {
+  it('edits with the current details, returns home and reopens the plan', () => {
+    const editing = planReducer(base, { type: 'edit' });
+    expect(editing).toMatchObject({ view: 'wizard', draftSource: planResponse.plan.input });
+
+    const home = planReducer(editing, { type: 'home' });
+    expect(home).toMatchObject({ view: 'landing', eventType: null });
+    expect(home.response).toBe(planResponse);
+
+    expect(planReducer(home, { type: 'openPlan' })).toMatchObject({
+      view: 'plan',
+      eventType: planResponse.plan.input.eventType,
+    });
+  });
+
+  it('marks the celebration as played', () => {
+    const next = planReducer({ ...base, celebrated: false }, { type: 'celebrated' });
+    expect(next.celebrated).toBe(true);
+  });
+});

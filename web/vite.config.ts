@@ -13,7 +13,18 @@ export default defineConfig({
     port: 5173,
     proxy: { '/api': 'http://localhost:3000' },
   },
-  build: { sourcemap: false, target: 'es2022' },
+  build: {
+    sourcemap: false,
+    target: 'es2022',
+    rollupOptions: {
+      output: {
+        // Libraries change far less often than app code, so they get their own long-cached
+        // chunk. GSAP stays out of it: it is lazy-loaded with the dashboard.
+        manualChunks: (id) =>
+          id.includes('node_modules') && !id.includes('gsap') ? 'vendor' : undefined,
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     coverage: {
@@ -21,6 +32,8 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}'],
       reporter: ['text-summary'],
+      // CI fails if the web app loses test coverage.
+      thresholds: { lines: 90, functions: 85, branches: 85 },
     },
   },
 });
